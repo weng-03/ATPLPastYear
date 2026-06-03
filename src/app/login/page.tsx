@@ -8,21 +8,15 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [signinState, signinAction, signinPending] = useActionState<AuthActionState, FormData>(signIn, null);
   const [signupState, signupAction, signupPending] = useActionState<AuthActionState, FormData>(signUp, null);
-  const [guestPending, startGuestTransition] = useTransition();
-  const [guestError, setGuestError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { theme, toggle } = useTheme();
 
   const isSignIn = mode === "signin";
   const currentState = isSignIn ? signinState : signupState;
   const isPending = isSignIn ? signinPending : signupPending;
 
-  async function handleGuest() {
-    setGuestError(null);
-    startGuestTransition(async () => {
-      const result = await signInAsGuest();
-      if (result?.error) setGuestError(result.error);
-    });
-  }
+  const currentState = isSignIn ? signinState : signupState;
+  const isPending = isSignIn ? signinPending : signupPending;
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: "var(--bg-base)" }}>
@@ -145,24 +139,75 @@ export default function LoginPage() {
               >
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={isSignIn ? "current-password" : "new-password"}
-                required
-                placeholder={isSignIn ? "••••••••" : "Min. 8 characters"}
-                className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border)",
-                  color: "var(--text-primary)",
-                  outline: "none",
-                }}
-                onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
-                onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={isSignIn ? "current-password" : "new-password"}
+                  required
+                  placeholder={isSignIn ? "••••••••" : "Min. 8 characters"}
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                    outline: "none",
+                    paddingRight: "2.5rem"
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-sky-400 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {!isSignIn && (
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    placeholder="Retype your password"
+                    className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-primary)",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
+                    onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
+                  />
+                </div>
+              </div>
+            )}
 
             <button
               id={`btn-${mode}`}
@@ -201,58 +246,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 mt-5">
-          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>or</span>
-          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-        </div>
-
-        {/* Guest mode button */}
-        {guestError && (
-          <div
-            className="mt-3 px-4 py-2.5 rounded-lg text-xs font-medium"
-            style={{
-              background: "var(--incorrect-dim)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "var(--incorrect)",
-            }}
-          >
-            ⚠ {guestError} — See setup guide below.
-          </div>
-        )}
-        <button
-          id="btn-guest"
-          type="button"
-          disabled={guestPending}
-          onClick={handleGuest}
-          className="w-full mt-3 py-3 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border)",
-            color: "var(--text-secondary)",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
-            (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-          }}
-        >
-          {guestPending ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              Entering as Guest…
-            </span>
-          ) : (
-            "🚀 Continue as Guest (Testing)"
-          )}
-        </button>
 
         {/* Footer — theme toggle + tagline */}
         <div className="flex items-center justify-between mt-6">

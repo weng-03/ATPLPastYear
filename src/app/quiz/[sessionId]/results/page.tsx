@@ -146,6 +146,14 @@ export default async function ResultsPage({
             border: "1px solid var(--border)",
             color: "var(--text-secondary)",
           }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
+            (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+          }}
         >
           ← Dashboard
         </Link>
@@ -195,6 +203,14 @@ export default async function ResultsPage({
               border: "1px solid var(--border)",
               color: "var(--text-secondary)",
             }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
+              (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+              (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+            }}
           >
             Back to Dashboard
           </Link>
@@ -205,6 +221,15 @@ export default async function ResultsPage({
             style={{
               background: "var(--sky-600)",
               color: "white",
+              border: "1px solid transparent"
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "var(--sky-500)";
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--sky-400)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "var(--sky-600)";
+              (e.currentTarget as HTMLElement).style.borderColor = "transparent";
             }}
           >
             Retake Quiz ↺

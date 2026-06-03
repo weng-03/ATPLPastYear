@@ -46,9 +46,14 @@ export async function signUp(
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." };
   }
 
   if (password.length < 8) {

@@ -95,6 +95,14 @@ export default function QuestionCard({
                 color: "var(--text-secondary)",
                 border: "1px solid var(--border)",
               }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
+                (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+              }}
             >
               Seen in Exam?
             </button>
@@ -155,7 +163,7 @@ export default function QuestionCard({
 
       {/* Question text — large, prominent, high contrast */}
       <h2
-        className="text-lg sm:text-xl md:text-2xl font-semibold leading-relaxed mb-6"
+        className="text-base sm:text-lg md:text-xl font-semibold leading-relaxed mb-6"
         style={{ color: "var(--text-primary)" }}
       >
         {questionText}
