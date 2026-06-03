@@ -140,20 +140,7 @@ export default async function ResultsPage({
         <Link
           href="/dashboard"
           id="btn-back-to-dashboard"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-          style={{
-            background: "var(--bg-overlay)",
-            border: "1px solid var(--border)",
-            color: "var(--text-secondary)",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
-            (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-          }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 bg-[var(--bg-overlay)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--sky-400)]"
         >
           ← Dashboard
         </Link>
@@ -197,40 +184,14 @@ export default async function ResultsPage({
           <Link
             href="/dashboard"
             id="btn-results-dashboard"
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-center transition-all duration-150"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border)",
-              color: "var(--text-secondary)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
-              (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-              (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-            }}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold text-center transition-all duration-150 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--sky-400)]"
           >
             Back to Dashboard
           </Link>
           <Link
             href={`/api/quiz/${session.id}/retake`}
             id="btn-retake"
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200"
-            style={{
-              background: "var(--sky-600)",
-              color: "white",
-              border: "1px solid transparent"
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--sky-500)";
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--sky-400)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--sky-600)";
-              (e.currentTarget as HTMLElement).style.borderColor = "transparent";
-            }}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
           >
             Retake Quiz ↺
           </Link>
