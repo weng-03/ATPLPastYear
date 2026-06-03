@@ -236,25 +236,32 @@ export default function QuizConfigPanel({
           </div>
         </div>
 
-        {/* Seen In Exam toggle */}
+        {/* Seen In Exam toggle (Disabled/Beta) */}
         <div
-          className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all duration-150"
+          className="flex items-center justify-between px-4 py-3 rounded-xl cursor-not-allowed transition-all duration-150 opacity-60"
           style={{
             background: "var(--bg-elevated)",
-            border: `1px solid ${seenInExam ? "var(--sky-500)" : "var(--border)"}`,
+            border: "1px solid var(--border)",
           }}
-          onClick={() => setSeenInExam((v) => !v)}
           id="toggle-seen-in-exam"
         >
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              Seen In Exam Questions
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Seen In Exam Questions
+              </p>
+              <span 
+                className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "rgba(56, 189, 248, 0.2)", color: "var(--sky-400)" }}
+              >
+                Beta
+              </span>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
               Only questions reported from real exams
             </p>
           </div>
-          <div className={`toggle-track ${seenInExam ? "active" : ""}`}>
+          <div className="toggle-track" style={{ opacity: 0.5 }}>
             <div className="toggle-thumb" />
           </div>
         </div>
