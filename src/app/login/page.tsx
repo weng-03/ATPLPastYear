@@ -15,9 +15,6 @@ export default function LoginPage() {
   const currentState = isSignIn ? signinState : signupState;
   const isPending = isSignIn ? signinPending : signupPending;
 
-  const currentState = isSignIn ? signinState : signupState;
-  const isPending = isSignIn ? signinPending : signupPending;
-
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: "var(--bg-base)" }}>
       {/* Card */}
