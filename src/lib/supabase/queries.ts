@@ -1,0 +1,371 @@
+import { createClient } from "@/lib/supabase/server";
+import type { QuizSession } from "@/types/database";
+
+// ============================================================
+// Questions Queries
+// ============================================================
+
+/**
+ * Fetch all distinct chapter names, sorted naturally.
+ */
+export async function getChapters(): Promise<string[]> {
+  const supabase = await createClient();
+  const allChapters = new Set<string>();
+  
+  let hasMore = true;
+  let offset = 0;
+  const PAGE_SIZE = 1000;
+
+  while (hasMore) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("questions")
+      .select("chapter")
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("[getChapters]", error.message);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      data.forEach((r: { chapter: string }) => allChapters.add(r.chapter));
+      offset += PAGE_SIZE;
+    }
+
+    if (!data || data.length < PAGE_SIZE) {
+      hasMore = false;
+    }
+  }
+
+  // Convert set to array and sort naturally
+  return Array.from(allChapters).sort();
+}
+
+/**
+ * Count how many questions exist for a chapter (or all chapters).
+ */
+export async function getQuestionCount(chapter?: string): Promise<number> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any).from("questions").select("id", { count: "exact", head: true });
+  if (chapter) query = query.eq("chapter", chapter);
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("[getQuestionCount]", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Fetch question IDs matching the given criteria.
+ * Returns an array of IDs (randomized if requested, limited to `limit`).
+ */
+export async function fetchQuestionIds({
+  chapter,
+  limit,
+  randomize,
+  seenInExamFilter,
+}: {
+  chapter?: string;
+  limit?: number;
+  randomize?: boolean;
+  seenInExamFilter?: boolean;
+}): Promise<number[]> {
+  const supabase = await createClient();
+  let allIds: number[] = [];
+  
+  let hasMore = true;
+  let offset = 0;
+  const PAGE_SIZE = 1000;
+
+  while (hasMore) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (supabase as any).from("questions").select("id").range(offset, offset + PAGE_SIZE - 1);
+    if (chapter) query = query.eq("chapter", chapter);
+    if (seenInExamFilter) {
+      // First, get all distinct question_ids from the seen reports table
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: seenData, error: seenError } = await (supabase as any)
+        .from("question_seen_reports")
+        .select("question_id");
+      if (seenError) {
+        console.error("[fetchQuestionIds:seenInExamFilter]", seenError.message);
+      } else {
+        const seenIds = Array.from(new Set((seenData || []).map((r: any) => r.question_id)));
+        if (seenIds.length > 0) {
+          query = query.in("id", seenIds);
+        } else {
+          // If no questions are seen in exam, return empty result quickly
+          return [];
+        }
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[fetchQuestionIds]", error?.message);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allIds = allIds.concat(data.map((r: { id: number }) => r.id));
+      offset += PAGE_SIZE;
+    }
+
+    if (!data || data.length < PAGE_SIZE) {
+      hasMore = false;
+    }
+  }
+
+  let ids = allIds;
+
+  if (randomize) {
+    // Fisher-Yates shuffle
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+  }
+
+  if (limit) ids = ids.slice(0, limit);
+  return ids;
+}
+
+/**
+ * Fetch full question rows for a list of IDs, preserving the given order.
+ */
+export async function getQuestionsByIds(
+  ids: number[]
+): Promise<import("@/types/database").Question[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  
+  const CHUNK_SIZE = 500;
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    chunks.push(ids.slice(i, i + CHUNK_SIZE));
+  }
+
+  let allData: import("@/types/database").Question[] = [];
+
+  for (const chunk of chunks) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("questions")
+      .select("*")
+      .in("id", chunk);
+
+    if (error) {
+      console.error("[getQuestionsByIds]", error?.message);
+      // If one chunk fails, we might want to return what we have or just continue
+      continue;
+    }
+    if (data) {
+      allData = allData.concat(data);
+    }
+  }
+
+  // Re-order to match the original `ids` order (Supabase returns in arbitrary order)
+  const map = new Map<number, import("@/types/database").Question>(
+    allData.map((q) => [q.id, q])
+  );
+  return ids.map((id) => map.get(id)).filter(Boolean) as import("@/types/database").Question[];
+}
+
+// ============================================================
+// Quiz Session Queries
+// ============================================================
+
+/**
+ * Fetch all active (paused / in_progress) quiz sessions for a user.
+ */
+export async function getActiveSessions(userId: string): Promise<QuizSession[]> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("quiz_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .in("status", ["in_progress", "paused"])
+    .order("started_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("[getActiveSessions]", error.message);
+    return [];
+  }
+  return (data ?? []) as QuizSession[];
+}
+
+/**
+ * Fetch all completed quiz sessions for a user.
+ */
+export async function getCompletedSessions(userId: string): Promise<QuizSession[]> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("quiz_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("[getCompletedSessions]", error.message);
+    return [];
+  }
+  return (data ?? []) as QuizSession[];
+}
+
+/**
+ * Create a new quiz session and return its ID.
+ */
+export async function createQuizSession(
+  session: Omit<QuizSession, "id">
+): Promise<string | null> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("quiz_sessions")
+    .insert(session)
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[createQuizSession]", error.message);
+    return null;
+  }
+  return (data as { id: string })?.id ?? null;
+}
+
+/**
+ * Save quiz progress (called on pause or answer submission).
+ */
+export async function saveQuizProgress(
+  sessionId: string,
+  updates: Partial<QuizSession>
+): Promise<boolean> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("quiz_sessions")
+    .update(updates)
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error("[saveQuizProgress]", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Fetch a single quiz session by ID (for resuming).
+ */
+export async function getQuizSession(
+  sessionId: string,
+  userId: string
+): Promise<QuizSession | null> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("quiz_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    console.error("[getQuizSession]", error.message);
+    return null;
+  }
+  return data as QuizSession;
+}
+
+// ============================================================
+// Seen in Exam Queries
+// ============================================================
+
+export async function reportQuestionSeen(questionId: number, airline: string): Promise<{ success: boolean; message?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, message: "User not authenticated" };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("question_seen_reports")
+    .insert({ user_id: user.id, question_id: questionId, airline });
+
+  if (error) {
+    console.error("[reportQuestionSeen]", error.message, error.code);
+    if (error.code === '23505') {
+      // Unique constraint violation - already reported
+      return { success: true, message: "Already reported" };
+    }
+    return { success: false, message: error.message };
+  }
+  return { success: true };
+}
+
+// ============================================================
+// Community Comments Queries
+// ============================================================
+
+export async function getQuestionComments(questionId: number): Promise<import("@/types/database").QuestionComment[]> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("question_comments")
+    .select("*")
+    .eq("question_id", questionId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[getQuestionComments]", error.message);
+    return [];
+  }
+  return (data ?? []) as import("@/types/database").QuestionComment[];
+}
+
+export async function postQuestionComment(questionId: number, commentText: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("question_comments")
+    .insert({
+      question_id: questionId,
+      user_id: user.id,
+      comment_text: commentText,
+    });
+
+  if (error) {
+    console.error("[postQuestionComment]", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteQuestionComment(commentId: string | number): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("question_comments")
+    .delete()
+    .match({ id: commentId, user_id: user.id }); // only delete if user_id matches
+
+  if (error) {
+    console.error("[deleteQuestionComment]", error.message);
+    return false;
+  }
+  return true;
+}
