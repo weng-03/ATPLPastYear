@@ -26,7 +26,7 @@ interface QuestionCardProps {
   currentUserId?: string;
 }
 
-type TabKey = "comments" | "exam_seen";
+type TabKey = "question" | "explanation" | "exam_seen" | "comments";
 
 export default function QuestionCard({
   questionId,
@@ -49,7 +49,7 @@ export default function QuestionCard({
   const [seenReportStatus, setSeenReportStatus] = useState<"idle" | "submitting" | "success">("idle");
 
   // ── Tabs ──
-  const [activeTab, setActiveTab] = useState<TabKey>("comments");
+  const [activeTab, setActiveTab] = useState<TabKey>("question");
 
   // ── Comments state ──
   const [comments, setComments] = useState<QuestionComment[]>([]);
@@ -67,6 +67,7 @@ export default function QuestionCard({
 
   // ── Reset all tab data when the question changes ──
   useEffect(() => {
+    setActiveTab("question");
     setComments([]);
     setCommentsLoaded(false);
     setSeenCounts({});
@@ -143,286 +144,28 @@ export default function QuestionCard({
     Others:  { bg: "rgba(156,163,175,0.15)", text: "rgb(156,163,175)", solid: "rgb(156,163,175)" },
   };
 
+  const tabs: { key: TabKey; label: string; icon: string; disabled?: boolean }[] = [
+    { key: "question", label: "QUESTION", icon: "▶" },
+    { key: "explanation", label: "EXPLANATION", icon: "📝", disabled: !isLocked && !examMode },
+    { key: "exam_seen", label: "EXAM SEEN", icon: "📈" },
+    { key: "comments", label: "COMMENTS", icon: "💬" },
+  ];
+
   return (
     <div className="card rounded-2xl p-6 sm:p-8 animate-slide-up">
-
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* ── Tabbed Section (ALWAYS visible, at the TOP) ──     */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      <div className="mb-6">
-        {/* ── Tab Bar ── */}
-        <div
-          className="flex rounded-t-xl overflow-hidden"
-          style={{ borderBottom: "2px solid var(--border)" }}
-        >
-          {([
-            { key: "comments" as TabKey, label: "COMMENTS" },
-            { key: "exam_seen" as TabKey, label: "EXAM SEEN" },
-          ]).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 text-center"
-              style={{
-                background: activeTab === tab.key ? "var(--bg-overlay)" : "transparent",
-                color: activeTab === tab.key
-                  ? (tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)")
-                  : "var(--text-muted)",
-                borderBottom: activeTab === tab.key
-                  ? `2px solid ${tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)"}`
-                  : "2px solid transparent",
-                marginBottom: "-2px",
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab Content ── */}
-        <div
-          className="rounded-b-xl p-4 sm:p-5 border border-t-0"
-          style={{
-            background: "var(--bg-overlay)",
-            borderColor: "var(--border)",
-          }}
-        >
-          {/* ───── COMMENTS TAB ───── */}
-          {activeTab === "comments" && (
-            <div>
-              {loadingComments ? (
-                <div className="flex items-center justify-center py-6">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--sky-400)" }}>
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                </div>
-              ) : (
-                <>
-                  {comments.length === 0 ? (
-                    <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-                      No comments yet. Be the first to share a tip!
-                    </p>
-                  ) : (
-                    <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
-                      {comments.map((c) => (
-                        <div
-                          key={c.id}
-                          className="flex items-start gap-3 p-3 rounded-lg"
-                          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
-                        >
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                            style={{ background: "var(--accent)", color: "white" }}
-                          >
-                            {(c.user_id ?? "U").charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
-                              {c.comment_text}
-                            </p>
-                            <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                              {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            </p>
-                          </div>
-                          {currentUserId && c.user_id === currentUserId && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteComment(c.id)}
-                              className="text-xs px-2 py-1 rounded hover:bg-[var(--incorrect-dim)] transition-colors flex-shrink-0"
-                              style={{ color: "var(--incorrect)" }}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* New comment input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && !postingComment) handlePostComment(); }}
-                      placeholder="Share a tip or comment..."
-                      className="flex-1 px-3 py-2 rounded-lg text-sm transition-all duration-200"
-                      style={{
-                        background: "var(--bg-elevated)",
-                        border: "1px solid var(--border)",
-                        color: "var(--text-primary)",
-                        outline: "none",
-                      }}
-                      onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
-                      onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handlePostComment}
-                      disabled={postingComment || !newComment.trim()}
-                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-40"
-                      style={{ background: "var(--sky-600)", color: "white" }}
-                    >
-                      {postingComment ? "..." : "Post"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ───── EXAM SEEN TAB ───── */}
-          {activeTab === "exam_seen" && (
-            <div>
-              {loadingSeen ? (
-                <div className="flex items-center justify-center py-6">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--warning)" }}>
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                </div>
-              ) : Object.keys(seenCounts).length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-                  No exam sightings reported yet. Use the &quot;Seen in Exam?&quot; button to report.
-                </p>
-              ) : (
-                <>
-                  <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-                    This question has been reported as appearing in real assessments.
-                  </p>
-                  <div className="space-y-0">
-                    {Object.entries(seenCounts)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([airline, count]) => {
-                        const colors = airlineColors[airline] ?? airlineColors.Others;
-                        return (
-                          <div
-                            key={airline}
-                            className="flex items-center justify-between py-3 px-1"
-                            style={{ borderBottom: "1px solid var(--border)" }}
-                          >
-                            <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                              {airline}
-                            </span>
-                            <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: colors.solid }}>
-                              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                              </svg>
-                              {count}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Progress indicator ── */}
-      <div className="flex items-center justify-between mb-6">
-        <span
-          className="text-sm font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
-          style={{
-            background: "var(--bg-overlay)",
-            color: "var(--sky-400)",
-            border: "1px solid var(--border-active)",
-          }}
-        >
-          Question {questionNumber} of {totalQuestions}
-        </span>
+      {/* ── Header: Progress & Seen in Exam Report ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
-          {/* Seen in Exam dropdown trigger */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowSeenModal(!showSeenModal);
-                setSelectedAirline(null);
-              }}
-              className="text-xs font-semibold px-3 py-1 rounded-full transition-colors"
-              style={{
-                background: "var(--bg-overlay)",
-                color: "var(--text-secondary)",
-                border: "1px solid var(--border)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "var(--warning)";
-                (e.currentTarget as HTMLElement).style.color = "var(--warning)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-              }}
-            >
-              Seen in Exam?
-            </button>
-
-            {showSeenModal && (
-              <div
-                className="absolute right-0 top-full mt-2 w-56 p-2 rounded-xl shadow-xl z-10 flex flex-col gap-1"
-                style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", textAlign: "left" }}
-              >
-                {seenReportStatus === "success" ? (
-                  <div className="text-center py-3 text-[var(--correct)]">Thanks for reporting!</div>
-                ) : selectedAirline ? (
-                  <div className="flex flex-col gap-3 p-1">
-                    <p className="text-xs text-[var(--text-primary)] text-center leading-relaxed">
-                      Confirm this question appears in <strong>{selectedAirline}</strong> assessment?
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedAirline(null); }}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-elevated)] hover:bg-[var(--bg-overlay)] transition-colors"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleSeenReport(selectedAirline); }}
-                        disabled={seenReportStatus === "submitting"}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
-                        style={{ background: "var(--warning)", color: "white" }}
-                      >
-                        {seenReportStatus === "submitting" ? "..." : "Confirm"}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="px-2 py-1 text-[var(--text-muted)] text-[10px] uppercase">Which airline?</div>
-                    {["MAS", "AirAsia", "Batik", "Others"].map((airline) => {
-                      const colors = airlineColors[airline] ?? airlineColors.Others;
-                      return (
-                        <button
-                          key={airline}
-                          onClick={(e) => { e.stopPropagation(); setSelectedAirline(airline); }}
-                          className="px-3 py-2 rounded-lg transition-colors text-left text-sm"
-                          style={{ color: "var(--text-primary)" }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = colors.bg;
-                            (e.currentTarget as HTMLElement).style.color = colors.text;
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "transparent";
-                            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-                          }}
-                        >
-                          {airline}
-                        </button>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
+          <span
+            className="text-sm font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
+            style={{
+              background: "var(--bg-overlay)",
+              color: "var(--sky-400)",
+              border: "1px solid var(--border-active)",
+            }}
+          >
+            Q {questionNumber} / {totalQuestions}
+          </span>
           {isAnswered && !examMode && (
             <span
               className="text-xs font-bold px-3 py-1 rounded-full"
@@ -436,126 +179,396 @@ export default function QuestionCard({
             </span>
           )}
         </div>
+
+        {/* Seen in Exam dropdown trigger */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowSeenModal(!showSeenModal);
+              setSelectedAirline(null);
+            }}
+            className="text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            style={{
+              background: "var(--bg-overlay)",
+              color: "var(--text-secondary)",
+              border: "1px solid var(--border)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--warning)";
+              (e.currentTarget as HTMLElement).style.color = "var(--warning)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+              (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+            }}
+          >
+            <span>Seen in Exam?</span>
+          </button>
+
+          {showSeenModal && (
+            <div
+              className="absolute right-0 top-full mt-2 w-56 p-2 rounded-xl shadow-xl z-10 flex flex-col gap-1"
+              style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", textAlign: "left" }}
+            >
+              {seenReportStatus === "success" ? (
+                <div className="text-center py-3 text-[var(--correct)] font-medium">Thanks for reporting!</div>
+              ) : selectedAirline ? (
+                <div className="flex flex-col gap-3 p-1">
+                  <p className="text-xs text-[var(--text-primary)] text-center leading-relaxed">
+                    Confirm this question appears in <strong>{selectedAirline}</strong> assessment?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedAirline(null); }}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-elevated)] hover:bg-[var(--bg-overlay)] transition-colors"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleSeenReport(selectedAirline); }}
+                      disabled={seenReportStatus === "submitting"}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                      style={{ background: "var(--warning)", color: "white" }}
+                    >
+                      {seenReportStatus === "submitting" ? "..." : "Confirm"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="px-2 py-1 text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-wider">Which airline?</div>
+                  {["MAS", "AirAsia", "Batik", "Others"].map((airline) => {
+                    const colors = airlineColors[airline] ?? airlineColors.Others;
+                    return (
+                      <button
+                        key={airline}
+                        onClick={(e) => { e.stopPropagation(); setSelectedAirline(airline); }}
+                        className="px-3 py-2 rounded-lg transition-colors text-left text-sm font-medium"
+                        style={{ color: "var(--text-primary)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = colors.bg;
+                          (e.currentTarget as HTMLElement).style.color = colors.text;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = "transparent";
+                          (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
+                        }}
+                      >
+                        {airline}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Question text ── */}
-      <h2
-        className="text-base sm:text-lg md:text-xl font-semibold leading-relaxed mb-6"
-        style={{ color: "var(--text-primary)" }}
-      >
-        {questionText}
-      </h2>
-
-      {/* ── Optional Image ── */}
-      {imageUrl && (
-        <div className="mb-8">
-          <img
-            src={imageUrl}
-            alt="Question reference"
-            className="w-full max-w-lg rounded-xl object-contain shadow-sm"
-            style={{ border: "1px solid var(--border)" }}
-          />
-        </div>
-      )}
-
-      {/* ── Answer options ── */}
-      <div className="space-y-3">
-        {options.map((opt) => {
-          const isSelected = selectedLabel === opt.displayLabel;
-          const isCorrect = correctLabel === opt.displayLabel;
-
-          let bg = "var(--bg-elevated)";
-          let border = "var(--border)";
-          let color = "var(--text-secondary)";
-
-          if (isLocked) {
-            if (isCorrect) {
-              bg = "var(--correct-dim)";
-              border = "var(--correct)";
-              color = "var(--correct)";
-            } else if (isSelected) {
-              bg = "var(--incorrect-dim)";
-              border = "var(--incorrect)";
-              color = "var(--incorrect)";
-            }
-          } else if (isSelected) {
-            bg = "var(--bg-overlay)";
-            border = "var(--sky-500)";
-            color = "var(--sky-400)";
-          }
-
+      {/* ── Main Navigation Tabs ── */}
+      <div className="flex flex-wrap gap-2 mb-8 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const isDisabled = tab.disabled;
           return (
             <button
-              key={opt.displayLabel}
-              id={`option-${opt.displayLabel}`}
+              key={tab.key}
               type="button"
-              disabled={isLocked}
-              onClick={() => onSelect(opt.displayLabel)}
-              className="w-full text-left flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 disabled:cursor-default group"
-              style={{ background: bg, border: `1px solid ${border}`, color }}
+              disabled={isDisabled}
+              onClick={() => setActiveTab(tab.key)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200"
+              style={{
+                color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+                opacity: isDisabled ? 0.4 : 1,
+                cursor: isDisabled ? "not-allowed" : "pointer",
+                borderBottom: isActive ? "2px solid var(--sky-400)" : "2px solid transparent",
+                marginBottom: "-14px", // Align with bottom border
+                paddingBottom: "12px"
+              }}
               onMouseEnter={(e) => {
-                if (!isLocked) {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
-                  (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
+                if (!isActive && !isDisabled) {
+                  (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isLocked && !isSelected) {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-                  (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
+                if (!isActive && !isDisabled) {
+                  (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
                 }
               }}
             >
-              <span
-                className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-colors duration-200"
-                style={{
-                  background: isLocked && isCorrect
-                    ? "rgba(16,185,129,0.2)"
-                    : isLocked && isSelected && !isCorrect
-                    ? "rgba(239,68,68,0.2)"
-                    : isSelected
-                    ? "rgba(14,165,233,0.15)"
-                    : "var(--bg-overlay)",
-                  color: isLocked && isCorrect
-                    ? "var(--correct)"
-                    : isLocked && isSelected && !isCorrect
-                    ? "var(--incorrect)"
-                    : isSelected
-                    ? "var(--sky-400)"
-                    : "var(--option-badge-color)",
-                }}
-              >
-                {opt.displayLabel}
-              </span>
-              <span className="text-base font-medium leading-relaxed flex-1">{opt.text}</span>
-              {isLocked && (isCorrect || isSelected) && (
-                <span className="flex-shrink-0 text-base font-bold">
-                  {isCorrect ? "✓" : "✗"}
-                </span>
-              )}
+              <span className="text-sm">{tab.icon}</span>
+              {tab.label}
             </button>
           );
         })}
       </div>
 
-      {/* ── Explanation (visible after answering in practice mode) ── */}
-      {isLocked && (
-        <div
-          className="mt-8 p-5 rounded-xl border animate-slide-up"
-          style={{
-            background: "var(--bg-overlay)",
-            borderColor: "var(--border)",
-            animationDelay: "0.1s",
-          }}
-        >
-          <h3 className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-            Explanation
-          </h3>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
-            {explanation || "Explanation placeholder text. Groundschool database entry pending."}
-          </p>
-        </div>
-      )}
+      {/* ── Content Area ── */}
+      <div className="animate-fade-in">
+        {/* ───── QUESTION TAB ───── */}
+        {activeTab === "question" && (
+          <div>
+            <h2
+              className="text-base sm:text-lg md:text-xl font-semibold leading-relaxed mb-6"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {questionText}
+            </h2>
+
+            {imageUrl && (
+              <div className="mb-8">
+                <img
+                  src={imageUrl}
+                  alt="Question reference"
+                  className="w-full max-w-lg rounded-xl object-contain shadow-sm"
+                  style={{ border: "1px solid var(--border)" }}
+                />
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {options.map((opt) => {
+                const isSelected = selectedLabel === opt.displayLabel;
+                const isCorrect = correctLabel === opt.displayLabel;
+
+                let bg = "var(--bg-elevated)";
+                let border = "var(--border)";
+                let color = "var(--text-secondary)";
+
+                if (isLocked) {
+                  if (isCorrect) {
+                    bg = "var(--correct-dim)";
+                    border = "var(--correct)";
+                    color = "var(--correct)";
+                  } else if (isSelected) {
+                    bg = "var(--incorrect-dim)";
+                    border = "var(--incorrect)";
+                    color = "var(--incorrect)";
+                  }
+                } else if (isSelected) {
+                  bg = "var(--bg-overlay)";
+                  border = "var(--sky-500)";
+                  color = "var(--sky-400)";
+                }
+
+                return (
+                  <button
+                    key={opt.displayLabel}
+                    id={`option-${opt.displayLabel}`}
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() => onSelect(opt.displayLabel)}
+                    className="w-full text-left flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 disabled:cursor-default group"
+                    style={{ background: bg, border: `1px solid ${border}`, color }}
+                    onMouseEnter={(e) => {
+                      if (!isLocked) {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
+                        (e.currentTarget as HTMLElement).style.background = "var(--bg-overlay)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isLocked && !isSelected) {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                        (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
+                      }
+                    }}
+                  >
+                    <span
+                      className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-colors duration-200"
+                      style={{
+                        background: isLocked && isCorrect
+                          ? "rgba(16,185,129,0.2)"
+                          : isLocked && isSelected && !isCorrect
+                          ? "rgba(239,68,68,0.2)"
+                          : isSelected
+                          ? "rgba(14,165,233,0.15)"
+                          : "var(--bg-overlay)",
+                        color: isLocked && isCorrect
+                          ? "var(--correct)"
+                          : isLocked && isSelected && !isCorrect
+                          ? "var(--incorrect)"
+                          : isSelected
+                          ? "var(--sky-400)"
+                          : "var(--option-badge-color)",
+                      }}
+                    >
+                      {opt.displayLabel}
+                    </span>
+                    <span className="text-base font-medium leading-relaxed flex-1">{opt.text}</span>
+                    {isLocked && (isCorrect || isSelected) && (
+                      <span className="flex-shrink-0 text-base font-bold">
+                        {isCorrect ? "✓" : "✗"}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ───── EXPLANATION TAB ───── */}
+        {activeTab === "explanation" && (
+          <div className="p-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
+              Detailed Explanation
+            </h3>
+            <p className="text-base leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
+              {explanation || "No detailed explanation is currently available for this question. A groundschool database entry is pending."}
+            </p>
+          </div>
+        )}
+
+        {/* ───── EXAM SEEN TAB ───── */}
+        {activeTab === "exam_seen" && (
+          <div className="p-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
+              Appeared In Tests
+            </h3>
+            
+            {loadingSeen ? (
+              <div className="flex items-center justify-center py-10">
+                <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24" style={{ color: "var(--warning)" }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : Object.keys(seenCounts).length === 0 ? (
+              <p className="text-sm text-center py-10" style={{ color: "var(--text-muted)" }}>
+                No exam sightings reported yet. Use the &quot;Seen in Exam?&quot; button to report.
+              </p>
+            ) : (
+              <div className="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border)] overflow-hidden">
+                <div className="grid grid-cols-2 p-4 border-b border-[var(--border)] bg-[var(--bg-overlay)]">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Airline</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] text-right">Reports</span>
+                </div>
+                {Object.entries(seenCounts)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([airline, count]) => {
+                    const colors = airlineColors[airline] ?? airlineColors.Others;
+                    return (
+                      <div
+                        key={airline}
+                        className="grid grid-cols-2 p-4 border-b border-[var(--border)] last:border-0 items-center hover:bg-[var(--bg-overlay)] transition-colors"
+                      >
+                        <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                          {airline}
+                        </span>
+                        <span className="flex items-center justify-end gap-2 text-sm font-bold" style={{ color: colors.solid }}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 opacity-80">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                          </svg>
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ───── COMMENTS TAB ───── */}
+        {activeTab === "comments" && (
+          <div className="p-2 flex flex-col h-full">
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
+              User Comments
+            </h3>
+
+            {loadingComments ? (
+              <div className="flex items-center justify-center py-10">
+                <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24" style={{ color: "var(--sky-400)" }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  {comments.length === 0 ? (
+                    <p className="text-sm text-center py-10" style={{ color: "var(--text-muted)" }}>
+                      No comments yet. Be the first to share a tip!
+                    </p>
+                  ) : (
+                    comments.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex gap-4 p-4 rounded-xl relative group"
+                        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-1 shadow-sm"
+                          style={{ background: "var(--accent)", color: "white" }}
+                        >
+                          {(c.user_id ?? "U").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+                              User
+                            </span>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                              {new Date(c.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "2-digit" })}
+                              {' | '}
+                              {new Date(c.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                            {c.comment_text}
+                          </p>
+                        </div>
+                        {currentUserId && c.user_id === currentUserId && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(c.id)}
+                            className="absolute top-4 right-4 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--incorrect-dim)]"
+                            style={{ color: "var(--incorrect)" }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="mt-auto">
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !postingComment) handlePostComment(); }}
+                      placeholder="Add a new comment..."
+                      className="flex-1 px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-sm"
+                      style={{
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-primary)",
+                        outline: "none",
+                      }}
+                      onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handlePostComment}
+                      disabled={postingComment || !newComment.trim()}
+                      className="px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-40 shadow-sm hover:shadow-md"
+                      style={{ background: "var(--sky-600)", color: "white" }}
+                    >
+                      {postingComment ? "Posting..." : "Post"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
