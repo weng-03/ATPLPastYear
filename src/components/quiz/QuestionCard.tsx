@@ -65,9 +65,20 @@ export default function QuestionCard({
 
   const isLocked = isAnswered && !examMode;
 
-  // ── Load data when tabs become visible & user switches tab ──
+  // ── Reset all tab data when the question changes ──
   useEffect(() => {
-    if (!isLocked) return;
+    setComments([]);
+    setCommentsLoaded(false);
+    setSeenCounts({});
+    setSeenLoaded(false);
+    setNewComment("");
+    setShowSeenModal(false);
+    setSelectedAirline(null);
+    setSeenReportStatus("idle");
+  }, [questionId]);
+
+  // ── Load data for the active tab ──
+  useEffect(() => {
     if (activeTab === "comments" && !commentsLoaded) {
       setLoadingComments(true);
       fetchQuestionComments(questionId).then((data) => {
@@ -84,7 +95,7 @@ export default function QuestionCard({
         setLoadingSeen(false);
       });
     }
-  }, [isLocked, activeTab, commentsLoaded, seenLoaded, questionId]);
+  }, [activeTab, commentsLoaded, seenLoaded, questionId]);
 
   // ── Handlers ──
   const handleSeenReport = async (airline: string) => {
@@ -111,7 +122,6 @@ export default function QuestionCard({
     const ok = await submitQuestionComment(questionId, newComment.trim());
     if (ok) {
       setNewComment("");
-      // Refresh comments
       const data = await fetchQuestionComments(questionId);
       setComments(data);
     }
@@ -125,7 +135,7 @@ export default function QuestionCard({
     }
   };
 
-  // ── Airline color map for hover ──
+  // ── Airline color map ──
   const airlineColors: Record<string, { bg: string; text: string; solid: string }> = {
     MAS:     { bg: "rgba(59,130,246,0.15)",  text: "rgb(96,165,250)",  solid: "rgb(59,130,246)" },
     AirAsia: { bg: "rgba(239,68,68,0.15)",   text: "rgb(248,113,113)", solid: "rgb(239,68,68)" },
@@ -135,6 +145,185 @@ export default function QuestionCard({
 
   return (
     <div className="card rounded-2xl p-6 sm:p-8 animate-slide-up">
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ── Tabbed Section (ALWAYS visible, at the TOP) ──     */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <div className="mb-6">
+        {/* ── Tab Bar ── */}
+        <div
+          className="flex rounded-t-xl overflow-hidden"
+          style={{ borderBottom: "2px solid var(--border)" }}
+        >
+          {([
+            { key: "comments" as TabKey, label: "COMMENTS" },
+            { key: "exam_seen" as TabKey, label: "EXAM SEEN" },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 text-center"
+              style={{
+                background: activeTab === tab.key ? "var(--bg-overlay)" : "transparent",
+                color: activeTab === tab.key
+                  ? (tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)")
+                  : "var(--text-muted)",
+                borderBottom: activeTab === tab.key
+                  ? `2px solid ${tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)"}`
+                  : "2px solid transparent",
+                marginBottom: "-2px",
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Tab Content ── */}
+        <div
+          className="rounded-b-xl p-4 sm:p-5 border border-t-0"
+          style={{
+            background: "var(--bg-overlay)",
+            borderColor: "var(--border)",
+          }}
+        >
+          {/* ───── COMMENTS TAB ───── */}
+          {activeTab === "comments" && (
+            <div>
+              {loadingComments ? (
+                <div className="flex items-center justify-center py-6">
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--sky-400)" }}>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                </div>
+              ) : (
+                <>
+                  {comments.length === 0 ? (
+                    <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+                      No comments yet. Be the first to share a tip!
+                    </p>
+                  ) : (
+                    <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
+                      {comments.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-start gap-3 p-3 rounded-lg"
+                          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+                        >
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                            style={{ background: "var(--accent)", color: "white" }}
+                          >
+                            {(c.user_id ?? "U").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
+                              {c.comment_text}
+                            </p>
+                            <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                              {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                          {currentUserId && c.user_id === currentUserId && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c.id)}
+                              className="text-xs px-2 py-1 rounded hover:bg-[var(--incorrect-dim)] transition-colors flex-shrink-0"
+                              style={{ color: "var(--incorrect)" }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* New comment input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !postingComment) handlePostComment(); }}
+                      placeholder="Share a tip or comment..."
+                      className="flex-1 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+                      style={{
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-primary)",
+                        outline: "none",
+                      }}
+                      onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handlePostComment}
+                      disabled={postingComment || !newComment.trim()}
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-40"
+                      style={{ background: "var(--sky-600)", color: "white" }}
+                    >
+                      {postingComment ? "..." : "Post"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ───── EXAM SEEN TAB ───── */}
+          {activeTab === "exam_seen" && (
+            <div>
+              {loadingSeen ? (
+                <div className="flex items-center justify-center py-6">
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--warning)" }}>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                </div>
+              ) : Object.keys(seenCounts).length === 0 ? (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+                  No exam sightings reported yet. Use the &quot;Seen in Exam?&quot; button to report.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+                    This question has been reported as appearing in real assessments.
+                  </p>
+                  <div className="space-y-0">
+                    {Object.entries(seenCounts)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([airline, count]) => {
+                        const colors = airlineColors[airline] ?? airlineColors.Others;
+                        return (
+                          <div
+                            key={airline}
+                            className="flex items-center justify-between py-3 px-1"
+                            style={{ borderBottom: "1px solid var(--border)" }}
+                          >
+                            <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                              {airline}
+                            </span>
+                            <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: colors.solid }}>
+                              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                              </svg>
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Progress indicator ── */}
       <div className="flex items-center justify-between mb-6">
         <span
@@ -349,203 +538,22 @@ export default function QuestionCard({
         })}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* ── Tabbed Section (visible after answering in practice mode) ── */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ── Explanation (visible after answering in practice mode) ── */}
       {isLocked && (
-        <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          {/* ── Explanation ── */}
-          <div
-            className="p-5 rounded-xl border mb-4"
-            style={{
-              background: "var(--bg-overlay)",
-              borderColor: "var(--border)",
-            }}
-          >
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-              Explanation
-            </h3>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
-              {explanation || "Explanation placeholder text. Groundschool database entry pending."}
-            </p>
-          </div>
-
-          {/* ── Tab Bar ── */}
-          <div
-            className="flex rounded-t-xl overflow-hidden"
-            style={{ borderBottom: "2px solid var(--border)" }}
-          >
-            {([
-              { key: "comments" as TabKey, label: "COMMENTS" },
-              { key: "exam_seen" as TabKey, label: "EXAM SEEN" },
-            ]).map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 text-center"
-                style={{
-                  background: activeTab === tab.key ? "var(--bg-overlay)" : "transparent",
-                  color: activeTab === tab.key
-                    ? (tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)")
-                    : "var(--text-muted)",
-                  borderBottom: activeTab === tab.key
-                    ? `2px solid ${tab.key === "exam_seen" ? "var(--warning)" : "var(--sky-400)"}`
-                    : "2px solid transparent",
-                  marginBottom: "-2px",
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Tab Content ── */}
-          <div
-            className="rounded-b-xl p-5 border border-t-0"
-            style={{
-              background: "var(--bg-overlay)",
-              borderColor: "var(--border)",
-            }}
-          >
-            {/* ───── COMMENTS TAB ───── */}
-            {activeTab === "comments" && (
-              <div>
-                {loadingComments ? (
-                  <div className="flex items-center justify-center py-6">
-                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--sky-400)" }}>
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                  </div>
-                ) : (
-                  <>
-                    {/* Comment list */}
-                    {comments.length === 0 ? (
-                      <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-                        No comments yet. Be the first to share a tip!
-                      </p>
-                    ) : (
-                      <div className="space-y-3 mb-4">
-                        {comments.map((c) => (
-                          <div
-                            key={c.id}
-                            className="flex items-start gap-3 p-3 rounded-lg"
-                            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
-                          >
-                            {/* Avatar placeholder */}
-                            <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                              style={{ background: "var(--accent)", color: "white" }}
-                            >
-                              {(c.user_id ?? "U").charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
-                                {c.comment_text}
-                              </p>
-                              <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                                {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              </p>
-                            </div>
-                            {/* Delete button — only show for own comments */}
-                            {currentUserId && c.user_id === currentUserId && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteComment(c.id)}
-                                className="text-xs px-2 py-1 rounded hover:bg-[var(--incorrect-dim)] transition-colors flex-shrink-0"
-                                style={{ color: "var(--incorrect)" }}
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* New comment input */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !postingComment) handlePostComment(); }}
-                        placeholder="Share a tip or comment..."
-                        className="flex-1 px-3 py-2 rounded-lg text-sm transition-all duration-200"
-                        style={{
-                          background: "var(--bg-elevated)",
-                          border: "1px solid var(--border)",
-                          color: "var(--text-primary)",
-                          outline: "none",
-                        }}
-                        onFocus={(e) => { e.target.style.borderColor = "var(--border-active)"; }}
-                        onBlur={(e) => { e.target.style.borderColor = "var(--border)"; }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handlePostComment}
-                        disabled={postingComment || !newComment.trim()}
-                        className="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-40"
-                        style={{ background: "var(--sky-600)", color: "white" }}
-                      >
-                        {postingComment ? "..." : "Post"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ───── EXAM SEEN TAB ───── */}
-            {activeTab === "exam_seen" && (
-              <div>
-                {loadingSeen ? (
-                  <div className="flex items-center justify-center py-6">
-                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--warning)" }}>
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                  </div>
-                ) : Object.keys(seenCounts).length === 0 ? (
-                  <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-                    No exam sightings reported yet. Use the &quot;Seen in Exam?&quot; button above to report.
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-                      This question has been reported as appearing in real assessments.
-                    </p>
-                    <div className="space-y-0">
-                      {Object.entries(seenCounts)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([airline, count]) => {
-                          const colors = airlineColors[airline] ?? airlineColors.Others;
-                          return (
-                            <div
-                              key={airline}
-                              className="flex items-center justify-between py-3 px-1"
-                              style={{ borderBottom: "1px solid var(--border)" }}
-                            >
-                              <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                                {airline}
-                              </span>
-                              <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: colors.solid }}>
-                                {/* Person icon */}
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                                </svg>
-                                {count}
-                              </span>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+        <div
+          className="mt-8 p-5 rounded-xl border animate-slide-up"
+          style={{
+            background: "var(--bg-overlay)",
+            borderColor: "var(--border)",
+            animationDelay: "0.1s",
+          }}
+        >
+          <h3 className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
+            Explanation
+          </h3>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
+            {explanation || "Explanation placeholder text. Groundschool database entry pending."}
+          </p>
         </div>
       )}
     </div>

@@ -71,9 +71,19 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
   const examMode = session.mode === "exam";
 
   // ── State ────────────────────────────────────────────────────────────────
-  const [currentIndex, setCurrentIndex] = useState(
-    session.current_question_index
-  );
+  const storageKey = `quiz-view-index-${session.id}`;
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < questions.length) {
+          return parsed;
+        }
+      }
+    }
+    return session.current_question_index;
+  });
   const [answers, setAnswers] = useState<Record<number, UserAnswer>>(
     session.answers ?? {}
   );
@@ -117,6 +127,11 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
     const existing = answers[q.id];
     setSelectedLabel(existing?.selectedDisplayLabel ?? null);
   }, [currentIndex, answers, questions]);
+
+  // ── Persist viewing index so refresh stays on same question ──
+  useEffect(() => {
+    sessionStorage.setItem(storageKey, String(currentIndex));
+  }, [currentIndex, storageKey]);
 
   // ── Exam mode timer ──────────────────────────────────────────────────────
   useEffect(() => {
