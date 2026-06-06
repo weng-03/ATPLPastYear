@@ -48,6 +48,7 @@ export default function QuestionCard({
   onSelect,
 }: QuestionCardProps) {
   const [showSeenModal, setShowSeenModal] = useState(false);
+  const [selectedAirline, setSelectedAirline] = useState<string | null>(null);
   const [seenReportStatus, setSeenReportStatus] = useState<"idle" | "submitting" | "success">("idle");
 
   const handleSeenReport = async (airline: string) => {
@@ -58,6 +59,7 @@ export default function QuestionCard({
       setTimeout(() => {
         setShowSeenModal(false);
         setSeenReportStatus("idle");
+        setSelectedAirline(null);
       }, 2000);
     } else {
       setSeenReportStatus("idle");
@@ -88,7 +90,10 @@ export default function QuestionCard({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setShowSeenModal(!showSeenModal)}
+              onClick={() => {
+                setShowSeenModal(!showSeenModal);
+                setSelectedAirline(null);
+              }}
               className="text-xs font-semibold px-3 py-1 rounded-full transition-colors"
               style={{
                 background: "var(--bg-overlay)",
@@ -96,8 +101,8 @@ export default function QuestionCard({
                 border: "1px solid var(--border)",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
-                (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--warning)";
+                (e.currentTarget as HTMLElement).style.color = "var(--warning)";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
@@ -109,27 +114,67 @@ export default function QuestionCard({
             
             {showSeenModal && (
               <div 
-                className="absolute right-0 top-full mt-2 w-48 p-2 rounded-xl shadow-xl z-10 flex flex-col gap-1"
+                className="absolute right-0 top-full mt-2 w-56 p-2 rounded-xl shadow-xl z-10 flex flex-col gap-1"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", textAlign: "left" }}
               >
                 {seenReportStatus === "success" ? (
                   <div className="text-center py-3 text-[var(--correct)]">Thanks for reporting!</div>
+                ) : selectedAirline ? (
+                  <div className="flex flex-col gap-3 p-1">
+                    <p className="text-xs text-[var(--text-primary)] text-center leading-relaxed">
+                      Confirm this question appears in <strong>{selectedAirline}</strong> assessment?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedAirline(null); }}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-elevated)] hover:bg-[var(--bg-overlay)] transition-colors"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSeenReport(selectedAirline); }}
+                        disabled={seenReportStatus === "submitting"}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                        style={{ background: "var(--warning)", color: "white" }}
+                      >
+                        {seenReportStatus === "submitting" ? "..." : "Confirm"}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="px-2 py-1 text-[var(--text-muted)] text-[10px] uppercase">Which airline?</div>
-                    {["MAS", "AirAsia", "Batik", "Others"].map((airline) => (
-                      <button
-                        key={airline}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSeenReport(airline);
-                        }}
-                        disabled={seenReportStatus === "submitting"}
-                        className="px-3 py-2 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors text-left"
-                      >
-                        {airline}
-                      </button>
-                    ))}
+                    {["MAS", "AirAsia", "Batik", "Others"].map((airline) => {
+                       let hoverColor = "";
+                       let hoverTextColor = "";
+                       if (airline === "MAS") { hoverColor = "rgba(59,130,246,0.15)"; hoverTextColor = "rgb(96,165,250)"; }
+                       else if (airline === "AirAsia") { hoverColor = "rgba(239,68,68,0.15)"; hoverTextColor = "rgb(248,113,113)"; }
+                       else if (airline === "Batik") { hoverColor = "rgba(168,85,247,0.15)"; hoverTextColor = "rgb(192,132,252)"; }
+                       else { hoverColor = "rgba(156,163,175,0.15)"; hoverTextColor = "rgb(156,163,175)"; }
+                       
+                       return (
+                         <button
+                           key={airline}
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setSelectedAirline(airline);
+                           }}
+                           className="px-3 py-2 rounded-lg transition-colors text-left text-sm"
+                           style={{ color: "var(--text-primary)" }}
+                           onMouseEnter={(e) => {
+                             (e.currentTarget as HTMLElement).style.background = hoverColor;
+                             (e.currentTarget as HTMLElement).style.color = hoverTextColor;
+                           }}
+                           onMouseLeave={(e) => {
+                             (e.currentTarget as HTMLElement).style.background = "transparent";
+                             (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
+                           }}
+                         >
+                           {airline}
+                         </button>
+                       );
+                    })}
                   </>
                 )}
               </div>
