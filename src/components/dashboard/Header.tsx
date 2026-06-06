@@ -76,15 +76,17 @@ export default function Header({ email }: HeaderProps) {
           )}
         </button>
 
-        {/* User info */}
-        <div className="hidden sm:block text-right">
-          <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
-            Signed in as
-          </p>
-          <a href="/profile" className="text-sm font-semibold truncate max-w-[200px] hover:underline block" style={{ color: "var(--text-primary)" }}>
-            {email}
-          </a>
-        </div>
+        {/* User profile icon */}
+        <a 
+          href="/profile" 
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-sm"
+          style={{ background: "var(--accent)", color: "white" }}
+          title="User Profile"
+        >
+          <span className="font-bold text-sm">
+            {email ? email.charAt(0).toUpperCase() : "U"}
+          </span>
+        </a>
 
         {/* Sign out */}
         <form action={signOut}>

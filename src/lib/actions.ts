@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { createClient } from "./supabase/server";
 import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile } from "./supabase/queries";
 
 export async function submitQuestionSeenReport(questionId: number, airline: string) {
@@ -15,7 +17,9 @@ export async function fetchQuestionComments(questionId: number) {
 }
 
 export async function submitQuestionComment(questionId: number, commentText: string) {
-  return await postQuestionComment(questionId, commentText);
+  const ok = await postQuestionComment(questionId, commentText);
+  if (ok) revalidatePath("/quiz/[sessionId]", "page");
+  return ok;
 }
 
 export async function removeQuestionComment(commentId: string | number) {
@@ -28,4 +32,22 @@ export async function fetchProfile(userId: string) {
 
 export async function saveProfile(userId: string, displayName: string) {
   return await updateProfile(userId, displayName);
+}
+
+export async function updateUserEmail(email: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.updateUser({ email });
+  if (error) {
+    return { success: false, message: error.message };
+  }
+  return { success: true, message: "A confirmation link has been sent to both your old and new email addresses." };
+}
+
+export async function updateUserPassword(password: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { success: false, message: error.message };
+  }
+  return { success: true, message: "Password updated successfully." };
 }

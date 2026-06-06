@@ -31,7 +31,11 @@ export default async function ProfilePage() {
           User Profile
         </h1>
         
-        <ProfileClient userId={user.id} initialDisplayName={profile?.display_name || ""} />
+        <ProfileClient 
+          userId={user.id} 
+          initialDisplayName={profile?.display_name || ""} 
+          initialEmail={user.email || ""} 
+        />
       </main>
     </div>
   );
