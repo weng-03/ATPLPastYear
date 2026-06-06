@@ -311,6 +311,27 @@ export async function reportQuestionSeen(questionId: number, airline: string): P
   return { success: true };
 }
 
+export async function getQuestionSeenCounts(questionId: number): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("question_seen_reports")
+    .select("airline")
+    .eq("question_id", questionId);
+
+  if (error) {
+    console.error("[getQuestionSeenCounts]", error.message);
+    return {};
+  }
+
+  // Group by airline and count
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? [])) {
+    counts[row.airline] = (counts[row.airline] || 0) + 1;
+  }
+  return counts;
+}
+
 // ============================================================
 // Community Comments Queries
 // ============================================================

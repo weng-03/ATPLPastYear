@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import QuestionCard from "./QuestionCard";
-import CommunityComments from "./CommunityComments";
+
 import type {
   QuizSession,
   Question,
@@ -477,6 +477,7 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
           isAnswered={isCurrentAnswered}
           examMode={examMode}
           onSelect={handleSelect}
+          currentUserId={session.user_id}
         />
 
         {/* ── Action area ── */}
@@ -538,8 +539,6 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
           </button>
         </div>
 
-        {/* ── Community Comments ── */}
-        <CommunityComments questionId={currentQuestion.id} currentUserId={session.user_id} />
 
             </div>
           </main>
