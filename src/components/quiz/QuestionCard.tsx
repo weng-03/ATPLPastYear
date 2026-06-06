@@ -509,12 +509,12 @@ export default function QuestionCard({
                           className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold mt-1 shadow-sm"
                           style={{ background: "var(--accent)", color: "white" }}
                         >
-                          {(c.user_id ?? "U").charAt(0).toUpperCase()}
+                          {(c.profiles?.display_name || c.user_id || "U").charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-2 mb-1">
                             <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
-                              User
+                              {c.profiles?.display_name || "User"}
                             </span>
                             <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                               {new Date(c.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "2-digit" })}

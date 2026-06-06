@@ -28,12 +28,19 @@ export interface QuestionSeenReport {
   reported_at: string;
 }
 
+export interface Profile {
+  id: string;
+  display_name: string | null;
+  updated_at: string | null;
+}
+
 export interface QuestionComment {
   id: string;
   question_id: number;
   user_id: string;
   comment_text: string;
   created_at: string;
+  profiles?: { display_name: string | null } | null;
 }
 
 /**

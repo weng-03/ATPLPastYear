@@ -81,9 +81,9 @@ export default function Header({ email }: HeaderProps) {
           <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
             Signed in as
           </p>
-          <p className="text-sm font-semibold truncate max-w-[200px]" style={{ color: "var(--text-primary)" }}>
+          <a href="/profile" className="text-sm font-semibold truncate max-w-[200px] hover:underline block" style={{ color: "var(--text-primary)" }}>
             {email}
-          </p>
+          </a>
         </div>
 
         {/* Sign out */}

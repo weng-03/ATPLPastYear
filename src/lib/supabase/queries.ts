@@ -341,7 +341,7 @@ export async function getQuestionComments(questionId: number): Promise<import("@
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("question_comments")
-    .select("*")
+    .select("*, profiles(display_name)")
     .eq("question_id", questionId)
     .order("created_at", { ascending: true });
 
@@ -386,6 +386,44 @@ export async function deleteQuestionComment(commentId: string | number): Promise
 
   if (error) {
     console.error("[deleteQuestionComment]", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ============================================================
+// Profile Queries
+// ============================================================
+
+export async function getProfile(userId: string): Promise<import("@/types/database").Profile | null> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getProfile]", error.message);
+    return null;
+  }
+  return data as import("@/types/database").Profile | null;
+}
+
+export async function updateProfile(userId: string, displayName: string): Promise<boolean> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("profiles")
+    .upsert({
+      id: userId,
+      display_name: displayName,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error("[updateProfile]", error.message);
     return false;
   }
   return true;

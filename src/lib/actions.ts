@@ -1,6 +1,6 @@
 "use server";
 
-import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments } from "./supabase/queries";
+import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile } from "./supabase/queries";
 
 export async function submitQuestionSeenReport(questionId: number, airline: string) {
   return await reportQuestionSeen(questionId, airline);
@@ -20,4 +20,12 @@ export async function submitQuestionComment(questionId: number, commentText: str
 
 export async function removeQuestionComment(commentId: string | number) {
   return await deleteQuestionComment(commentId);
+}
+
+export async function fetchProfile(userId: string) {
+  return await getProfile(userId);
+}
+
+export async function saveProfile(userId: string, displayName: string) {
+  return await updateProfile(userId, displayName);
 }
