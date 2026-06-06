@@ -26,7 +26,7 @@ interface QuestionCardProps {
   currentUserId?: string;
 }
 
-type TabKey = "question" | "explanation" | "exam_seen" | "comments";
+type TabKey = "question" | "exam_seen" | "comments";
 
 export default function QuestionCard({
   questionId,
@@ -146,7 +146,6 @@ export default function QuestionCard({
 
   const tabs: { key: TabKey; label: string; icon: string; disabled?: boolean }[] = [
     { key: "question", label: "QUESTION", icon: "▶" },
-    { key: "explanation", label: "EXPLANATION", icon: "📝", disabled: !isLocked && !examMode },
     { key: "exam_seen", label: "EXAM SEEN", icon: "📈" },
     { key: "comments", label: "COMMENTS", icon: "💬" },
   ];
@@ -406,18 +405,25 @@ export default function QuestionCard({
                 );
               })}
             </div>
-          </div>
-        )}
 
-        {/* ───── EXPLANATION TAB ───── */}
-        {activeTab === "explanation" && (
-          <div className="p-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-              Detailed Explanation
-            </h3>
-            <p className="text-base leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
-              {explanation || "No detailed explanation is currently available for this question. A groundschool database entry is pending."}
-            </p>
+            {/* ── Explanation (visible after answering in practice mode) ── */}
+            {isLocked && (
+              <div
+                className="mt-8 p-5 rounded-xl border animate-slide-up"
+                style={{
+                  background: "var(--bg-overlay)",
+                  borderColor: "var(--border)",
+                  animationDelay: "0.1s",
+                }}
+              >
+                <h3 className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
+                  Explanation
+                </h3>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
+                  {explanation || "No detailed explanation is currently available for this question. A groundschool database entry is pending."}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
