@@ -428,3 +428,58 @@ export async function updateProfile(userId: string, displayName: string): Promis
   }
   return true;
 }
+
+// ============================================================
+// Question Report Queries
+// ============================================================
+
+export async function getUserQuestionReport(questionId: number): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("question_reports")
+    .select("id")
+    .match({ question_id: questionId, user_id: user.id })
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getUserQuestionReport]", error.message);
+    return false;
+  }
+  return !!data;
+}
+
+export async function toggleQuestionReport(questionId: number, isReporting: boolean): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  if (isReporting) {
+    // Insert report
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("question_reports")
+      .insert({ question_id: questionId, user_id: user.id });
+
+    if (error && error.code !== "23505") { // Ignore unique violation
+      console.error("[toggleQuestionReport:insert]", error.message);
+      return false;
+    }
+  } else {
+    // Delete report
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("question_reports")
+      .delete()
+      .match({ question_id: questionId, user_id: user.id });
+
+    if (error) {
+      console.error("[toggleQuestionReport:delete]", error.message);
+      return false;
+    }
+  }
+  return true;
+}

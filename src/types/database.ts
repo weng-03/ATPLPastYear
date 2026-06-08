@@ -28,6 +28,13 @@ export interface QuestionSeenReport {
   reported_at: string;
 }
 
+export interface QuestionReport {
+  id: string;
+  user_id: string;
+  question_id: number;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   display_name: string | null;

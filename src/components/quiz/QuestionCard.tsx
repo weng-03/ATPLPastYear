@@ -8,6 +8,8 @@ import {
   fetchQuestionComments,
   submitQuestionComment,
   removeQuestionComment,
+  fetchUserQuestionReport,
+  submitQuestionReportToggle,
 } from "@/lib/actions";
 
 interface QuestionCardProps {
@@ -51,6 +53,12 @@ export default function QuestionCard({
   // ── Tabs ──
   const [activeTab, setActiveTab] = useState<TabKey>("question");
 
+  // ── Question Report ──
+  const [isReported, setIsReported] = useState(false);
+  const [reportLoaded, setReportLoaded] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
   // ── Comments state ──
   const [comments, setComments] = useState<QuestionComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
@@ -76,10 +84,21 @@ export default function QuestionCard({
     setShowSeenModal(false);
     setSelectedAirline(null);
     setSeenReportStatus("idle");
+    setIsReported(false);
+    setReportLoaded(false);
+    setShowReportModal(false);
+    setReportSubmitting(false);
   }, [questionId]);
 
-  // ── Load data for the active tab ──
+  // ── Load data for the active tab & report status ──
   useEffect(() => {
+    if (!reportLoaded) {
+      fetchUserQuestionReport(questionId).then((status) => {
+        setIsReported(status);
+        setReportLoaded(true);
+      });
+    }
+
     if (activeTab === "comments" && !commentsLoaded) {
       setLoadingComments(true);
       fetchQuestionComments(questionId).then((data) => {
@@ -136,6 +155,19 @@ export default function QuestionCard({
     }
   };
 
+  const handleToggleReport = async () => {
+    setReportSubmitting(true);
+    const newStatus = !isReported;
+    const ok = await submitQuestionReportToggle(questionId, newStatus);
+    if (ok) {
+      setIsReported(newStatus);
+    } else {
+      alert("Failed to update report status. Please try again.");
+    }
+    setReportSubmitting(false);
+    setShowReportModal(false);
+  };
+
   // ── Airline color map ──
   const airlineColors: Record<string, { bg: string; text: string; solid: string }> = {
     MAS:     { bg: "rgba(59,130,246,0.15)",  text: "rgb(96,165,250)",  solid: "rgb(59,130,246)" },
@@ -177,6 +209,49 @@ export default function QuestionCard({
               {selectedLabel === correctLabel ? "✓ Correct" : "✗ Wrong"}
             </span>
           )}
+
+          {/* Report Button */}
+          <div className="relative ml-2">
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              title={isReported ? "Cancel Report" : "Report Question"}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 border group ${isReported ? 'bg-[var(--incorrect-dim)] text-[var(--incorrect)] border-[var(--incorrect)]' : 'bg-[var(--bg-overlay)] text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--incorrect-dim)] hover:text-[var(--incorrect)] hover:border-[var(--incorrect)]'}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 transition-transform group-hover:scale-110">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              </svg>
+            </button>
+
+            {/* Report Confirmation Modal */}
+            {showReportModal && (
+              <div 
+                className="absolute left-0 top-full mt-2 w-56 p-3 rounded-xl shadow-xl z-20"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", textAlign: "left" }}
+              >
+                <p className="text-xs font-medium mb-3" style={{ color: "var(--text-primary)" }}>
+                  {isReported ? "Cancel your report for this question?" : "Report this question for review?"}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowReportModal(false); }}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-elevated)] hover:bg-[var(--bg-overlay)] transition-colors"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleToggleReport(); }}
+                    disabled={reportSubmitting}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                    style={{ background: "var(--incorrect)", color: "white" }}
+                  >
+                    {reportSubmitting ? "..." : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Seen in Exam dropdown trigger */}

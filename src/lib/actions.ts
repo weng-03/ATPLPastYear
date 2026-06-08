@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "./supabase/server";
-import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile } from "./supabase/queries";
+import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile, getUserQuestionReport, toggleQuestionReport } from "./supabase/queries";
 
 export async function submitQuestionSeenReport(questionId: number, airline: string) {
   return await reportQuestionSeen(questionId, airline);
@@ -50,4 +50,12 @@ export async function updateUserPassword(password: string) {
     return { success: false, message: error.message };
   }
   return { success: true, message: "Password updated successfully." };
+}
+
+export async function fetchUserQuestionReport(questionId: number) {
+  return await getUserQuestionReport(questionId);
+}
+
+export async function submitQuestionReportToggle(questionId: number, isReporting: boolean) {
+  return await toggleQuestionReport(questionId, isReporting);
 }
