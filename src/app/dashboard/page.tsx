@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getChapters,
+  getChapterCounts,
   getActiveSessions,
   getCompletedSessions,
 } from "@/lib/supabase/queries";
@@ -27,34 +27,12 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  // ── Parallel data fetching ──
-  const [chapters, activeSessions, completedSessions] = await Promise.all([
-    getChapters(),
+  // ── Parallel data fetching (single RPC for chapters + counts) ──
+  const [{ chapters, countMap }, activeSessions, completedSessions] = await Promise.all([
+    getChapterCounts(),
     getActiveSessions(user.id),
     getCompletedSessions(user.id),
   ]);
-
-  // Build per-chapter question counts for the config panel
-  const countMap: Record<string, number> = {};
-
-  // Total count across all chapters
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count: totalCount } = await (supabase as any)
-    .from("questions")
-    .select("id", { count: "exact", head: true });
-  countMap[""] = totalCount ?? 0;
-
-  // Count per chapter in parallel
-  await Promise.all(
-    chapters.map(async (ch) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count: c } = await (supabase as any)
-        .from("questions")
-        .select("id", { count: "exact", head: true })
-        .eq("chapter", ch);
-      countMap[ch] = c ?? 0;
-    })
-  );
 
   const hasActiveSessions = activeSessions.length > 0;
   const hasCompletedSessions = completedSessions.length > 0;

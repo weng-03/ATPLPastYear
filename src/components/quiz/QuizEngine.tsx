@@ -111,6 +111,21 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
     Record<number, ShuffledOption[]>
   >({});
 
+  // ── Debounced Save ───────────────────────────────────────────────────────
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedSave = useCallback((updates: Partial<QuizSession>) => {
+    setIsSaving(true);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await saveProgress(session.id, updates);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 500);
+  }, [session.id]);
+
   // ── Build shuffled options on mount ─────────────────────────────────────
   useEffect(() => {
     const map: Record<number, ShuffledOption[]> = {};
@@ -135,6 +150,60 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
     sessionStorage.setItem(storageKey, String(currentIndex));
   }, [currentIndex, storageKey]);
 
+  // ── Finish the quiz ──────────────────────────────────────────────────────
+  const handleFinish = useCallback(
+    async (timedOut = false) => {
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      const finalAnswers = timedOut ? { ...answers } : answers;
+
+      const correctCount = Object.values(finalAnswers).filter(
+        (a) => a.isCorrect
+      ).length;
+      const score = Math.round(
+        (correctCount / session.total_questions) * 100
+      );
+
+      setIsSaving(true);
+      try {
+        await saveProgress(session.id, {
+          status: "completed",
+          score,
+          answers: finalAnswers,
+          current_question_index: questions.length - 1,
+          completed_at: new Date().toISOString(),
+          time_remaining_seconds: timedOut ? 0 : timeLeft,
+        });
+      } finally {
+        setIsSaving(false);
+      }
+
+      router.push(`/quiz/${session.id}/results`);
+    },
+    [answers, session.id, session.total_questions, questions.length, timeLeft, router]
+  );
+
+  // ── Attempt to finish (Task 3: prevent premature finish) ─────────────────
+  const handleAttemptFinish = useCallback(() => {
+    const currentAnsweredCount = Object.keys(answers).length;
+    if (currentAnsweredCount < session.total_questions) {
+      // Show warning toast
+      setShowFinishWarning(true);
+      setHighlightUnanswered(true);
+
+      // Auto-dismiss after 5 seconds
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => {
+        setShowFinishWarning(false);
+      }, 5000);
+
+      return;
+    }
+
+    // All answered, proceed to finish
+    handleFinish(false);
+  }, [answers, session.total_questions, handleFinish]);
+
   // ── Exam mode timer ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!examMode) return;
@@ -154,7 +223,7 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examMode]);
+  }, [currentIndex, debouncedSave]);
 
   // ── Keyboard navigation (Task 4) ────────────────────────────────────────
   useEffect(() => {
@@ -169,20 +238,28 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
           const hasAnswer = q && !!answers[q.id];
           // In practice mode, only advance if answered. In exam mode, always allow.
           if (hasAnswer || examMode) {
-            setCurrentIndex((i) => Math.min(i + 1, questions.length - 1));
+            setCurrentIndex((i) => {
+              const next = Math.min(i + 1, questions.length - 1);
+              debouncedSave({ current_question_index: next });
+              return next;
+            });
           }
         }
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         if (currentIndex > 0) {
-          setCurrentIndex((i) => Math.max(0, i - 1));
+          setCurrentIndex((i) => {
+            const next = Math.max(0, i - 1);
+            debouncedSave({ current_question_index: next });
+            return next;
+          });
         }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, questions, answers, examMode]);
+  }, [currentIndex, questions, answers, examMode, debouncedSave]);
 
   // ── Derived values ───────────────────────────────────────────────────────
   const currentQuestion = questions[currentIndex];
@@ -236,84 +313,36 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
         setShowFinishWarning(false);
       }
 
-      // Persist to Supabase in the background
-      setIsSaving(true);
-      try {
-        await saveProgress(session.id, {
-          answers: newAnswers,
-          current_question_index: currentIndex,
-        });
-      } finally {
-        setIsSaving(false);
-      }
+      // Persist to Supabase with debounce
+      debouncedSave({
+        answers: newAnswers,
+        current_question_index: currentIndex,
+      });
     },
-    [currentQuestion, isCurrentAnswered, examMode, shuffledOptionsMap, answers, session.id, currentIndex, highlightUnanswered]
+    [currentQuestion, isCurrentAnswered, examMode, shuffledOptionsMap, answers, currentIndex, highlightUnanswered, debouncedSave]
   );
 
   // ── Navigate to next question ────────────────────────────────────────────
-  const handleNext = useCallback(async () => {
+  const handleNext = useCallback(() => {
     if (!isLastQuestion) {
       setCurrentIndex((i) => i + 1);
-      await saveProgress(session.id, {
+      debouncedSave({
         current_question_index: currentIndex + 1,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLastQuestion, currentIndex, session.id]);
+  }, [isLastQuestion, currentIndex, debouncedSave]);
 
-  // ── Attempt to finish (Task 3: prevent premature finish) ─────────────────
-  const handleAttemptFinish = useCallback(() => {
-    const currentAnsweredCount = Object.keys(answers).length;
-    if (currentAnsweredCount < session.total_questions) {
-      // Show warning toast
-      setShowFinishWarning(true);
-      setHighlightUnanswered(true);
-
-      // Auto-dismiss after 5 seconds
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => {
-        setShowFinishWarning(false);
-      }, 5000);
-
-      return;
+  const handlePrev = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex((i) => i - 1);
+      debouncedSave({
+        current_question_index: currentIndex - 1,
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLastQuestion, currentIndex, debouncedSave]);
 
-    // All answered, proceed to finish
-    handleFinish(false);
-  }, [answers, session.total_questions]);
-
-  // ── Finish the quiz ──────────────────────────────────────────────────────
-  const handleFinish = useCallback(
-    async (timedOut = false) => {
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      const finalAnswers = timedOut ? { ...answers } : answers;
-
-      const correctCount = Object.values(finalAnswers).filter(
-        (a) => a.isCorrect
-      ).length;
-      const score = Math.round(
-        (correctCount / session.total_questions) * 100
-      );
-
-      setIsSaving(true);
-      try {
-        await saveProgress(session.id, {
-          status: "completed",
-          score,
-          answers: finalAnswers,
-          current_question_index: questions.length - 1,
-          completed_at: new Date().toISOString(),
-          time_remaining_seconds: timedOut ? 0 : timeLeft,
-        });
-      } finally {
-        setIsSaving(false);
-      }
-
-      router.push(`/quiz/${session.id}/results`);
-    },
-    [answers, session.id, session.total_questions, questions.length, timeLeft, router]
-  );
 
   // ── Pause and return to dashboard ────────────────────────────────────────
   const handlePause = useCallback(async () => {
@@ -536,7 +565,7 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
             id="btn-prev"
             type="button"
             disabled={currentIndex === 0}
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            onClick={handlePrev}
             className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
               background: "var(--bg-elevated)",
@@ -616,7 +645,10 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
                       key={q.id}
                       id={`nav-q${i + 1}`}
                       type="button"
-                      onClick={() => setCurrentIndex(i)}
+                      onClick={() => {
+                        setCurrentIndex(i);
+                        debouncedSave({ current_question_index: i });
+                      }}
                       className={`w-full aspect-square rounded-md text-xs font-bold transition-all duration-150 flex items-center justify-center ${shouldPulse ? "pulse-unanswered" : ""}`}
                       style={{
                         background: bg,

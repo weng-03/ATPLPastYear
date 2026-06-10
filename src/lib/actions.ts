@@ -36,7 +36,7 @@ export async function saveProfile(userId: string, displayName: string) {
 
 export async function updateUserEmail(email: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.updateUser({ email });
+  const { error } = await supabase.auth.updateUser({ email });
   if (error) {
     return { success: false, message: error.message };
   }
@@ -45,7 +45,7 @@ export async function updateUserEmail(email: string) {
 
 export async function updateUserPassword(password: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.updateUser({ password });
+  const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     return { success: false, message: error.message };
   }

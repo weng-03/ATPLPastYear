@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import type { ShuffledOption, QuestionComment } from "@/types/database";
 import {
   submitQuestionSeenReport,
@@ -30,7 +30,7 @@ interface QuestionCardProps {
 
 type TabKey = "question" | "exam_seen" | "comments";
 
-export default function QuestionCard({
+const QuestionCard = memo(function QuestionCard({
   questionId,
   questionText,
   imageUrl,
@@ -652,4 +652,6 @@ export default function QuestionCard({
       </div>
     </div>
   );
-}
+});
+
+export default QuestionCard;

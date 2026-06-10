@@ -6,57 +6,73 @@ import type { QuizSession } from "@/types/database";
 // ============================================================
 
 /**
- * Fetch all distinct chapter names, sorted naturally.
+ * Fetch all chapters with their question counts in a single RPC call.
+ * Falls back to the old paginated approach if the RPC doesn't exist.
  */
-export async function getChapters(): Promise<string[]> {
+export async function getChapterCounts(): Promise<{ chapters: string[]; countMap: Record<string, number> }> {
   const supabase = await createClient();
+
+  // Try the optimized RPC first
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('get_chapter_counts');
+
+  if (!error && data && data.length > 0) {
+    const countMap: Record<string, number> = {};
+    let total = 0;
+    const chapters: string[] = [];
+
+    for (const row of data as { chapter: string; question_count: number }[]) {
+      countMap[row.chapter] = row.question_count;
+      total += row.question_count;
+      chapters.push(row.chapter);
+    }
+    countMap[""] = total;
+    return { chapters, countMap };
+  }
+
+  // Fallback: paginated approach (if RPC not deployed yet)
+  console.warn('[getChapterCounts] RPC not available, using fallback. Error:', error?.message);
   const allChapters = new Set<string>();
-  
   let hasMore = true;
   let offset = 0;
   const PAGE_SIZE = 1000;
 
   while (hasMore) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    const { data: pageData, error: pageError } = await (supabase as any)
       .from("questions")
       .select("chapter")
       .range(offset, offset + PAGE_SIZE - 1);
 
-    if (error) {
-      console.error("[getChapters]", error.message);
-      break;
-    }
-
-    if (data && data.length > 0) {
-      data.forEach((r: { chapter: string }) => allChapters.add(r.chapter));
+    if (pageError) { console.error("[getChapterCounts:fallback]", pageError.message); break; }
+    if (pageData && pageData.length > 0) {
+      pageData.forEach((r: { chapter: string }) => allChapters.add(r.chapter));
       offset += PAGE_SIZE;
     }
-
-    if (!data || data.length < PAGE_SIZE) {
-      hasMore = false;
-    }
+    if (!pageData || pageData.length < PAGE_SIZE) hasMore = false;
   }
 
-  // Convert set to array and sort naturally
-  return Array.from(allChapters).sort();
-}
+  const chapters = Array.from(allChapters).sort();
+  const countMap: Record<string, number> = {};
 
-/**
- * Count how many questions exist for a chapter (or all chapters).
- */
-export async function getQuestionCount(chapter?: string): Promise<number> {
-  const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any).from("questions").select("id", { count: "exact", head: true });
-  if (chapter) query = query.eq("chapter", chapter);
+  const { count: totalCount } = await (supabase as any)
+    .from("questions")
+    .select("id", { count: "exact", head: true });
+  countMap[""] = totalCount ?? 0;
 
-  const { count, error } = await query;
-  if (error) {
-    console.error("[getQuestionCount]", error.message);
-    return 0;
-  }
-  return count ?? 0;
+  await Promise.all(
+    chapters.map(async (ch) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count: c } = await (supabase as any)
+        .from("questions")
+        .select("id", { count: "exact", head: true })
+        .eq("chapter", ch);
+      countMap[ch] = c ?? 0;
+    })
+  );
+
+  return { chapters, countMap };
 }
 
 /**
@@ -187,7 +203,7 @@ export async function getActiveSessions(userId: string): Promise<QuizSession[]> 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("quiz_sessions")
-    .select("*")
+    .select("id, status, mode, chapter, total_questions, answers, score, started_at, completed_at, time_remaining_seconds, user_id")
     .eq("user_id", userId)
     .in("status", ["in_progress", "paused"])
     .order("started_at", { ascending: false })
@@ -208,7 +224,7 @@ export async function getCompletedSessions(userId: string): Promise<QuizSession[
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("quiz_sessions")
-    .select("*")
+    .select("id, status, mode, chapter, total_questions, answers, score, started_at, completed_at, time_remaining_seconds, user_id")
     .eq("user_id", userId)
     .eq("status", "completed")
     .order("completed_at", { ascending: false })
