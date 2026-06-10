@@ -37,10 +37,10 @@
 
   /* Borders */
   --border:         #404040;
-  --border-active:  rgba(130, 200, 229, 0.7);
+  --border-active:  rgba(130, 200, 229, 1);
 
   /* Cards — solid backgrounds, no glass blur */
-  --card-bg:        #111111;
+  --card-bg:        #161616;
   --card-border:    #333333;
 
   /* Header */

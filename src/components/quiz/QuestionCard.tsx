@@ -409,7 +409,7 @@ export default function QuestionCard({
 
                 let bg = "var(--bg-elevated)";
                 let border = "var(--border)";
-                let color = "var(--text-secondary)";
+                let color = "var(--text-primary)";
 
                 if (isLocked) {
                   if (isCorrect) {
