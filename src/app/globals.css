@@ -30,18 +30,18 @@
   --warning-dim:    rgba(69, 26, 3, 0.4); /* amber-950/40 */
 
   /* Text - clear and crisp */
-  --text-primary:   #f8fafc; /* slate-50 */
-  --text-secondary: #cbd5e1; /* slate-300 */
-  --text-muted:     #94a3b8; /* slate-400 */
+  --text-primary:   #ffffff; /* pure white */
+  --text-secondary: #e2e8f0; /* slate-200 */
+  --text-muted:     #cbd5e1; /* slate-300 */
   --option-badge-color: #ffffff; /* pure white in dark mode */
 
   /* Borders */
-  --border:         #2a2a2a;
-  --border-active:  rgba(130, 200, 229, 0.5);
+  --border:         #404040;
+  --border-active:  rgba(130, 200, 229, 0.7);
 
   /* Cards — solid backgrounds, no glass blur */
   --card-bg:        #111111;
-  --card-border:    #222222;
+  --card-border:    #333333;
 
   /* Header */
   --header-bg:      rgba(10, 10, 10, 0.92);
