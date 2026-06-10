@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import QuestionCard from "./QuestionCard";
+import { useTheme } from "@/components/ThemeProvider";
 
 import type {
   QuizSession,
@@ -69,6 +70,7 @@ interface QuizEngineProps {
 export default function QuizEngine({ session, questions }: QuizEngineProps) {
   const router = useRouter();
   const examMode = session.mode === "exam";
+  const { theme, toggle } = useTheme();
 
   // ── State ────────────────────────────────────────────────────────────────
   const storageKey = `quiz-view-index-${session.id}`;
@@ -428,8 +430,46 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
           )}
         </div>
 
-        {/* Right: saving indicator + pause */}
+        {/* Right: theme toggle + saving indicator + pause */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            id="btn-theme-toggle"
+            type="button"
+            onClick={toggle}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5"
+            style={{
+              background: "var(--bg-overlay)",
+              border: "1px solid var(--border)",
+              color: "var(--text-secondary)",
+            }}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border-active)";
+              (e.currentTarget as HTMLElement).style.color = "var(--sky-400)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+              (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+            }}
+          >
+            {theme === "dark" ? (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </button>
+
           {isSaving && (
             <span className="text-xs hidden sm:block" style={{ color: "var(--text-muted)" }}>
               Saving…
