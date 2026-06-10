@@ -9,17 +9,17 @@
 
 /* ── Dark Theme (default) ───────────────────────────────────── */
 :root, :root[data-theme="dark"] {
-  /* Core palette — softer premium dark neutral */
-  --bg-base:        #0B132B;
-  --bg-surface:     #111C40;
-  --bg-elevated:    #16254F;
-  --bg-overlay:     #1F3266;
+  /* Core palette — carbon black neutral tones */
+  --bg-base:        #0a0a0a;
+  --bg-surface:     #141414;
+  --bg-elevated:    #1a1a1a;
+  --bg-overlay:     #262626;
 
-  /* Aviation accent colors */
-  --sky-400:        #38bdf8;
-  --sky-500:        #0ea5e9;
-  --sky-600:        #0284c7;
-  --accent:         #083d64;
+  /* Aviation accent colors — sky blue */
+  --sky-400:        #82C8E5;
+  --sky-500:        #5AB3D4;
+  --sky-600:        #3A95B8;
+  --accent:         #1B4D5E;
 
   /* Status colors - softer backgrounds, vivid text */
   --correct:        #34d399; /* emerald-400 */
@@ -36,15 +36,15 @@
   --option-badge-color: #ffffff; /* pure white in dark mode */
 
   /* Borders */
-  --border:         #1e293b; /* slate-800 */
-  --border-active:  rgba(56, 189, 248, 0.4);
+  --border:         #2a2a2a;
+  --border-active:  rgba(130, 200, 229, 0.5);
 
   /* Cards — solid backgrounds, no glass blur */
-  --card-bg:        #111C40;
-  --card-border:    #1e293b;
+  --card-bg:        #111111;
+  --card-border:    #222222;
 
   /* Header */
-  --header-bg:      rgba(11, 19, 43, 0.92);
+  --header-bg:      rgba(10, 10, 10, 0.92);
 }
 
 /* ── Light Theme ────────────────────────────────────────────── */
@@ -135,7 +135,12 @@ body {
 .card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(130, 200, 229, 0.15);
+  box-shadow: 0 0 20px rgba(130, 200, 229, 0.04);
 }
 
 /* Keep glass-card for backward compat but make it solid */

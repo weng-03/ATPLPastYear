@@ -13,7 +13,23 @@ export const metadata: Metadata = {
   title: "ATPL Past Year — Aviation Exam Preparation",
   description:
     "Prepare for your aviation ground school exams with adaptive quizzes, timed exam mode, and detailed progress tracking.",
-  keywords: ["aviation", "ground school", "exam prep", "pilot", "FAA", "PPL", "CPL"],
+  keywords: ["aviation", "ground school", "exam prep", "pilot", "EASA", "ATPL", "PPL", "CPL"],
+  openGraph: {
+    title: "ATPL Past Year",
+    description: "Prepare for your aviation ground school exams with adaptive quizzes, timed exam mode, and detailed progress tracking.",
+    url: "https://atpl-past-year.vercel.app", // Replace with actual URL
+    siteName: "ATPL Past Year",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ATPL Past Year",
+    description: "Prepare for your aviation ground school exams with adaptive quizzes, timed exam mode, and detailed progress tracking.",
+  },
+  appleWebApp: {
+    title: "ATPL Past Year",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({
