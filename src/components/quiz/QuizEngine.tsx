@@ -106,10 +106,8 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
 
   useEffect(() => {
     const pageForCurrent = Math.floor(currentIndex / itemsPerPage);
-    if (pageForCurrent !== sidebarPage) {
-      setSidebarPage(pageForCurrent);
-    }
-  }, [currentIndex, itemsPerPage, sidebarPage]);
+    setSidebarPage(pageForCurrent);
+  }, [currentIndex, itemsPerPage]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -248,16 +246,11 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
       if (e.key === "ArrowRight") {
         e.preventDefault();
         if (currentIndex < questions.length - 1) {
-          const q = questions[currentIndex];
-          const hasAnswer = q && !!answers[q.id];
-          // In practice mode, only advance if answered. In exam mode, always allow.
-          if (hasAnswer || examMode) {
-            setCurrentIndex((i) => {
-              const next = Math.min(i + 1, questions.length - 1);
-              debouncedSave({ current_question_index: next });
-              return next;
-            });
-          }
+          setCurrentIndex((i) => {
+            const next = Math.min(i + 1, questions.length - 1);
+            debouncedSave({ current_question_index: next });
+            return next;
+          });
         }
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
