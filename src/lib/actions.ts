@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "./supabase/server";
-import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile, getUserQuestionReport, toggleQuestionReport } from "./supabase/queries";
+import { reportQuestionSeen, getQuestionSeenCounts, postQuestionComment, deleteQuestionComment, getQuestionComments, getProfile, updateProfile, getUserQuestionReport, toggleQuestionReport, deleteQuizSession } from "./supabase/queries";
 
 export async function submitQuestionSeenReport(questionId: number, airline: string) {
   return await reportQuestionSeen(questionId, airline);
@@ -58,4 +58,10 @@ export async function fetchUserQuestionReport(questionId: number) {
 
 export async function submitQuestionReportToggle(questionId: number, isReporting: boolean) {
   return await toggleQuestionReport(questionId, isReporting);
+}
+
+export async function removeQuizSession(sessionId: string) {
+  const ok = await deleteQuizSession(sessionId);
+  if (ok) revalidatePath("/dashboard");
+  return ok;
 }

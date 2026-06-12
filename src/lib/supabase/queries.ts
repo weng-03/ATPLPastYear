@@ -259,6 +259,24 @@ export async function createQuizSession(
 }
 
 /**
+ * Delete a quiz session by ID.
+ */
+export async function deleteQuizSession(sessionId: string): Promise<boolean> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("quiz_sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error("[deleteQuizSession]", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
  * Save quiz progress (called on pause or answer submission).
  */
 export async function saveQuizProgress(

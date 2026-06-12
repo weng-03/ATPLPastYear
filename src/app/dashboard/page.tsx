@@ -56,6 +56,24 @@ export default async function DashboardPage() {
               ? `You have ${activeSessions.length} quiz${activeSessions.length > 1 ? "zes" : ""} in progress. Keep going!`
               : "Configure a new quiz below to begin studying."}
           </p>
+
+          {/* New Annex Notice */}
+          <div 
+            className="p-3 mt-4 rounded-lg border flex items-center gap-3 animate-fade-in"
+            style={{ 
+              background: "rgba(14, 165, 233, 0.05)", 
+              borderColor: "var(--border)",
+              color: "var(--text-primary)"
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--sky-400)" strokeWidth="2" className="w-5 h-5 flex-shrink-0">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4 M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <p className="text-sm font-medium">
+              Annexes are not available for the time being, please stay tuned for this update.
+            </p>
+          </div>
         </div>
 
         {/* ── Main grid: Config panel + Sessions ── */}

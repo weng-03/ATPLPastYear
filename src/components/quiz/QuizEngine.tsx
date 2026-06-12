@@ -98,6 +98,20 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
   // Toast / finish warning (Task 3)
   const [showFinishWarning, setShowFinishWarning] = useState(false);
   const [highlightUnanswered, setHighlightUnanswered] = useState(false);
+
+  // Sidebar Pagination
+  const [sidebarPage, setSidebarPage] = useState(0);
+  const itemsPerPage = 100;
+  const totalPages = Math.ceil(questions.length / itemsPerPage);
+
+  useEffect(() => {
+    const pageForCurrent = Math.floor(currentIndex / itemsPerPage);
+    if (pageForCurrent !== sidebarPage) {
+      setSidebarPage(pageForCurrent);
+    }
+  }, [currentIndex, itemsPerPage, sidebarPage]);
+
+  // ── Derived state ────────────────────────────────────────────────────────
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Timer for exam mode
@@ -628,7 +642,10 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
                 Quiz Progress
               </h3>
               <div className="grid grid-cols-5 gap-2">
-                {questions.map((q, i) => {
+                {questions
+                  .slice(sidebarPage * itemsPerPage, (sidebarPage + 1) * itemsPerPage)
+                  .map((q, localIndex) => {
+                  const i = sidebarPage * itemsPerPage + localIndex;
                   const ans = answers[q.id];
                   const isCurrent = i === currentIndex;
                   const isUnanswered = !ans;
@@ -662,6 +679,30 @@ export default function QuizEngine({ session, questions }: QuizEngineProps) {
                   );
                 })}
               </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={() => setSidebarPage((p) => Math.max(0, p - 1))}
+                    disabled={sidebarPage === 0}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-[var(--bg-surface)] transition-colors"
+                    style={{ background: "var(--bg-overlay)", color: "var(--text-secondary)" }}
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                    Page {sidebarPage + 1} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setSidebarPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={sidebarPage === totalPages - 1}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-[var(--bg-surface)] transition-colors"
+                    style={{ background: "var(--bg-overlay)", color: "var(--text-secondary)" }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           </aside>
         </div>

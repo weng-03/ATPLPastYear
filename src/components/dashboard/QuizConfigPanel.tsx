@@ -194,9 +194,30 @@ export default function QuizConfigPanel({
           >
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>10</span>
-              <span className="text-lg font-bold" style={{ color: "var(--sky-400)" }}>
-                {clampedSlider}
-              </span>
+              <input
+                type="number"
+                min={10}
+                max={availableCount}
+                value={sliderValue === 0 ? "" : clampedSlider}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setSliderValue(isNaN(val) ? 0 : val);
+                }}
+                onBlur={() => {
+                  if (sliderValue < 10) setSliderValue(10);
+                  if (sliderValue > availableCount) setSliderValue(availableCount);
+                }}
+                className="text-lg font-bold bg-transparent text-center focus:outline-none transition-colors duration-200"
+                style={{
+                  color: "var(--sky-400)",
+                  width: "60px",
+                  borderBottom: "2px solid transparent",
+                  MozAppearance: "textfield"
+                }}
+                onFocus={(e) => {
+                  (e.target as HTMLInputElement).style.borderBottomColor = "var(--sky-400)";
+                }}
+              />
               <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{availableCount}</span>
             </div>
             <input
