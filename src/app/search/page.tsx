@@ -55,7 +55,7 @@ export default async function SearchPage({
             name="q"
             defaultValue={query}
             placeholder="Search by keyword, phrase, or question ID..."
-            className="w-full pl-12 pr-4 py-4 rounded-2xl text-base focus:outline-none transition-all"
+            className="w-full pl-12 pr-4 py-4 rounded-2xl text-base focus:outline-none transition-all focus:border-[var(--sky-400)] focus:ring-1 focus:ring-[var(--sky-400)]"
             style={{ 
               background: "var(--bg-surface)", 
               border: "1px solid var(--border)",
@@ -63,12 +63,6 @@ export default async function SearchPage({
               boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
             }}
             autoFocus
-            onFocus={(e) => {
-              (e.target as HTMLInputElement).style.borderColor = "var(--sky-400)";
-            }}
-            onBlur={(e) => {
-              (e.target as HTMLInputElement).style.borderColor = "var(--border)";
-            }}
           />
         </form>
 
