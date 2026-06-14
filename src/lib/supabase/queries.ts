@@ -536,7 +536,7 @@ export async function searchQuestions(query: string): Promise<import("@/types/da
     dbQuery = (supabase as any).from("questions").select("*").or(`question_text.ilike.%${query}%,explanation.ilike.%${query}%`);
   }
 
-  const { data, error } = await dbQuery.limit(50);
+  const { data, error } = await dbQuery;
 
   if (error) {
     console.error("[searchQuestions]", error.message);
