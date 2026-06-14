@@ -517,3 +517,30 @@ export async function toggleQuestionReport(questionId: number, isReporting: bool
   }
   return true;
 }
+
+/**
+ * Search questions by text, explanation, or ID.
+ */
+export async function searchQuestions(query: string): Promise<import("@/types/database").Question[]> {
+  if (!query || query.trim().length === 0) return [];
+  const supabase = await createClient();
+
+  const isNumber = /^\d+$/.test(query.trim());
+  let dbQuery;
+
+  if (isNumber) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dbQuery = (supabase as any).from("questions").select("*").or(`id.eq.${query},question_number.eq.${query}`);
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dbQuery = (supabase as any).from("questions").select("*").or(`question_text.ilike.%${query}%,explanation.ilike.%${query}%`);
+  }
+
+  const { data, error } = await dbQuery.limit(50);
+
+  if (error) {
+    console.error("[searchQuestions]", error.message);
+    return [];
+  }
+  return data as import("@/types/database").Question[];
+}

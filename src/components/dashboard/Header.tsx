@@ -47,8 +47,25 @@ export default function Header({ email }: HeaderProps) {
         </div>
       </div>
 
-      {/* Right side: theme toggle + user + sign out */}
+      {/* Right side: search + theme toggle + user + sign out */}
       <div className="flex items-center gap-3">
+        {/* Search button */}
+        <a
+          href="/search"
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-200"
+          style={{
+            background: "var(--bg-overlay)",
+            border: "1px solid var(--border)",
+            color: "var(--text-secondary)",
+          }}
+          title="Search Questions"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </a>
+
         {/* Theme toggle */}
         <button
           id="btn-theme-toggle"
