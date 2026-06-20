@@ -16,8 +16,8 @@ export async function fetchQuestionComments(questionId: number) {
   return await getQuestionComments(questionId);
 }
 
-export async function submitQuestionComment(questionId: number, commentText: string) {
-  const ok = await postQuestionComment(questionId, commentText);
+export async function submitQuestionComment(questionId: number, commentText: string, imageUrl?: string) {
+  const ok = await postQuestionComment(questionId, commentText, imageUrl);
   if (ok) revalidatePath("/quiz/[sessionId]", "page");
   return ok;
 }
@@ -64,4 +64,44 @@ export async function removeQuizSession(sessionId: string) {
   const ok = await deleteQuizSession(sessionId);
   if (ok) revalidatePath("/dashboard");
   return ok;
+}
+
+export async function uploadCommentImage(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Unauthorized" };
+
+  const file = formData.get("file") as File | null;
+  if (!file) return { success: false, error: "No file provided" };
+
+  if (!file.type.startsWith("image/")) {
+    return { success: false, error: "Only images are allowed" };
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { success: false, error: "Image too large (max 5MB)" };
+  }
+
+  const ext = file.name.split('.').pop() || 'png';
+  const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(2)}.${ext}`;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).storage
+    .from("comment-images")
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    console.error("[uploadCommentImage]", error.message);
+    return { success: false, error: error.message };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: urlData } = (supabase as any).storage
+    .from("comment-images")
+    .getPublicUrl(fileName);
+
+  return { success: true, url: urlData.publicUrl };
 }

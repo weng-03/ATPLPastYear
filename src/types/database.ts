@@ -46,6 +46,7 @@ export interface QuestionComment {
   question_id: number;
   user_id: string;
   comment_text: string;
+  image_url?: string | null;
   created_at: string;
   profiles?: { display_name: string | null } | null;
 }

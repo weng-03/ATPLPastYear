@@ -10,6 +10,7 @@ import {
   removeQuestionComment,
   fetchUserQuestionReport,
   submitQuestionReportToggle,
+  uploadCommentImage,
 } from "@/lib/actions";
 
 interface QuestionCardProps {
@@ -65,6 +66,8 @@ const QuestionCard = memo(function QuestionCard({
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+  const [pastedImage, setPastedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   // ── Exam Seen state ──
   const [seenCounts, setSeenCounts] = useState<Record<string, number>>({});
@@ -81,6 +84,8 @@ const QuestionCard = memo(function QuestionCard({
     setSeenCounts({});
     setSeenLoaded(false);
     setNewComment("");
+    setPastedImage(null);
+    setImagePreviewUrl(null);
     setShowSeenModal(false);
     setSelectedAirline(null);
     setSeenReportStatus("idle");
@@ -137,15 +142,55 @@ const QuestionCard = memo(function QuestionCard({
   };
 
   const handlePostComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() && !pastedImage) return;
     setPostingComment(true);
-    const ok = await submitQuestionComment(questionId, newComment.trim());
+
+    let imageUrl: string | undefined = undefined;
+    if (pastedImage) {
+      const formData = new FormData();
+      formData.append("file", pastedImage);
+      const res = await uploadCommentImage(formData);
+      if (res.success && res.url) {
+        imageUrl = res.url;
+      } else {
+        alert("Failed to upload image: " + (res.error || "Unknown error"));
+        setPostingComment(false);
+        return;
+      }
+    }
+
+    const ok = await submitQuestionComment(questionId, newComment.trim(), imageUrl);
     if (ok) {
       setNewComment("");
+      setPastedImage(null);
+      setImagePreviewUrl(null);
       const data = await fetchQuestionComments(questionId);
       setComments(data);
     }
     setPostingComment(false);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setPastedImage(file);
+          setImagePreviewUrl(URL.createObjectURL(file));
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setPastedImage(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleDeleteComment = async (commentId: string | number) => {
@@ -597,9 +642,16 @@ const QuestionCard = memo(function QuestionCard({
                               {new Date(c.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </div>
-                          <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>
                             {c.comment_text}
                           </p>
+                          {c.image_url && (
+                            <div className="mt-3">
+                              <a href={c.image_url} target="_blank" rel="noopener noreferrer">
+                                <img src={c.image_url} alt="Comment attachment" className="max-w-full h-auto rounded-lg border shadow-sm max-h-64 object-contain" style={{ borderColor: "var(--border)" }} />
+                              </a>
+                            </div>
+                          )}
                         </div>
                         {currentUserId && c.user_id === currentUserId && (
                           <button
@@ -617,14 +669,33 @@ const QuestionCard = memo(function QuestionCard({
                 </div>
 
                 <div className="mt-auto">
-                  <div className="flex gap-3">
+                  {imagePreviewUrl && (
+                    <div className="mb-3 relative inline-block animate-fade-in">
+                      <img src={imagePreviewUrl} alt="Preview" className="max-h-32 rounded-lg border shadow-sm object-contain" style={{ borderColor: "var(--border)", background: "var(--bg-elevated)" }} />
+                      <button
+                        type="button"
+                        onClick={() => { setPastedImage(null); setImagePreviewUrl(null); }}
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex gap-3 items-center">
+                    <label className="cursor-pointer p-3 rounded-xl transition-colors shrink-0 hover:opacity-80" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }} title="Attach Image">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                      </svg>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </label>
                     <input
                       type="text"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && !postingComment) handlePostComment(); }}
-                      placeholder="Add a new comment..."
-                      className="flex-1 px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-sm"
+                      onPaste={handlePaste}
+                      placeholder="Add a comment... (Paste images with Ctrl+V)"
+                      className="flex-1 px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-sm min-w-0"
                       style={{
                         background: "var(--bg-elevated)",
                         border: "1px solid var(--border)",
@@ -637,7 +708,7 @@ const QuestionCard = memo(function QuestionCard({
                     <button
                       type="button"
                       onClick={handlePostComment}
-                      disabled={postingComment || !newComment.trim()}
+                      disabled={postingComment || (!newComment.trim() && !pastedImage)}
                       className="px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-40 shadow-sm hover:shadow-md"
                       style={{ background: "var(--sky-600)", color: "white" }}
                     >

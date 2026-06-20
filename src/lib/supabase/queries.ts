@@ -386,7 +386,7 @@ export async function getQuestionComments(questionId: number): Promise<import("@
   return (data ?? []) as import("@/types/database").QuestionComment[];
 }
 
-export async function postQuestionComment(questionId: number, commentText: string): Promise<boolean> {
+export async function postQuestionComment(questionId: number, commentText: string, imageUrl?: string): Promise<boolean> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
@@ -398,6 +398,7 @@ export async function postQuestionComment(questionId: number, commentText: strin
       question_id: questionId,
       user_id: user.id,
       comment_text: commentText,
+      image_url: imageUrl || null,
     });
 
   if (error) {
