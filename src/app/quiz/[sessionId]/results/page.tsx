@@ -191,7 +191,7 @@ export default async function ResultsPage({
           <Link
             href={`/api/quiz/${session.id}/retake`}
             id="btn-retake"
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/20 hover:border-sky-500/30"
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
           >
             Retake All ↺
           </Link>
@@ -199,7 +199,7 @@ export default async function ResultsPage({
             <Link
               href={`/api/quiz/${session.id}/retake?wrongOnly=true`}
               id="btn-retake-wrong"
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
+              className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-red-600 text-white border border-transparent hover:bg-red-500 hover:border-red-400"
             >
               Retake Wrong Only ({wrongCount + skippedCount}) ↺
             </Link>
