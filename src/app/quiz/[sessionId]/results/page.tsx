@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getQuizSession, getQuestionsByIds } from "@/lib/supabase/queries";
 import type { Question, ShuffledOption } from "@/types/database";
+import RetakeButton from "@/components/quiz/RetakeButton";
 
 export const metadata: Metadata = {
   title: "Results — ATPL Past Year",
@@ -188,21 +189,21 @@ export default async function ResultsPage({
           >
             Back to Dashboard
           </Link>
-          <Link
+          <RetakeButton
             href={`/api/quiz/${session.id}/retake`}
             id="btn-retake"
             className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
           >
             Retake All ↺
-          </Link>
+          </RetakeButton>
           {wrongCount + skippedCount > 0 && (
-            <Link
+            <RetakeButton
               href={`/api/quiz/${session.id}/retake?wrongOnly=true`}
               id="btn-retake-wrong"
               className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-red-600 text-white border border-transparent hover:bg-red-500 hover:border-red-400"
             >
               Retake Wrong Only ({wrongCount + skippedCount}) ↺
-            </Link>
+            </RetakeButton>
           )}
         </div>
 
