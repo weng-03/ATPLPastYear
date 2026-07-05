@@ -191,7 +191,7 @@ export default async function ResultsPage({
           <Link
             href={`/api/quiz/${session.id}/retake`}
             id="btn-retake"
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--sky-400)] hover:text-[var(--sky-400)]"
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/20 hover:border-sky-500/30"
           >
             Retake All ↺
           </Link>
