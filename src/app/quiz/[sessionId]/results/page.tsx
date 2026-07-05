@@ -180,7 +180,7 @@ export default async function ResultsPage({
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-3 mb-8 animate-slide-up" style={{ animationDelay: "0.05s" }}>
+        <div className="flex flex-col sm:flex-row gap-3 mb-8 animate-slide-up" style={{ animationDelay: "0.05s" }}>
           <Link
             href="/dashboard"
             id="btn-results-dashboard"
@@ -191,10 +191,19 @@ export default async function ResultsPage({
           <Link
             href={`/api/quiz/${session.id}/retake`}
             id="btn-retake"
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--sky-400)] hover:text-[var(--sky-400)]"
           >
-            Retake Quiz ↺
+            Retake All ↺
           </Link>
+          {wrongCount + skippedCount > 0 && (
+            <Link
+              href={`/api/quiz/${session.id}/retake?wrongOnly=true`}
+              id="btn-retake-wrong"
+              className="flex-1 py-3 rounded-xl text-sm font-bold text-center transition-all duration-200 bg-[var(--sky-600)] text-white border border-transparent hover:bg-[var(--sky-500)] hover:border-[var(--sky-400)]"
+            >
+              Retake Wrong Only ({wrongCount + skippedCount}) ↺
+            </Link>
+          )}
         </div>
 
         {/* ── Question review ── */}

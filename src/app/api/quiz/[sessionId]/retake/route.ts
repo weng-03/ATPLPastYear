@@ -6,6 +6,8 @@ export async function GET(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const { sessionId } = await params;
+  const url = new URL(request.url);
+  const wrongOnly = url.searchParams.get("wrongOnly") === "true";
   const supabase = await createClient();
 
   const {
@@ -32,14 +34,30 @@ export async function GET(
 
   // Build the new session payload
   const now = new Date().toISOString();
+
+  // Determine which question IDs to include
+  let questionIds: number[] = oldSession.question_ids;
+  if (wrongOnly && oldSession.answers) {
+    const answers = oldSession.answers as Record<number, { isCorrect: boolean }>;
+    questionIds = (oldSession.question_ids as number[]).filter((qId) => {
+      const answer = answers[qId];
+      // Include questions that were answered incorrectly OR skipped (not answered at all)
+      return !answer || !answer.isCorrect;
+    });
+    // If somehow all questions were correct, fall back to full retake
+    if (questionIds.length === 0) {
+      questionIds = oldSession.question_ids;
+    }
+  }
+
   const sessionPayload = {
     user_id: user.id,
     status: "in_progress" as const,
     mode: oldSession.mode,
     chapter: oldSession.chapter,
-    total_questions: oldSession.total_questions,
+    total_questions: questionIds.length,
     current_question_index: 0,
-    question_ids: oldSession.question_ids,
+    question_ids: questionIds,
     answers: {} as Record<string, never>,
     started_at: now,
     time_remaining_seconds: oldSession.mode === "exam" ? 50 * 60 : undefined,
