@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useTransition } from "react";
 import type { QuizSession } from "@/types/database";
-import { useTransition } from "react";
 import { removeQuizSession } from "@/lib/actions";
 
 interface SessionCardProps {
@@ -31,16 +31,30 @@ function formatDuration(session: QuizSession): string {
 
 export default function SessionCard({ session }: SessionCardProps) {
   const [isPending, startTransition] = useTransition();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [removed, setRemoved] = useState(false);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this quiz?")) {
-      startTransition(async () => {
-        await removeQuizSession(session.id);
-      });
-    }
+    setShowConfirm(true);
   };
+
+  const handleConfirmDelete = () => {
+    setShowConfirm(false);
+    // Optimistically hide the card instantly
+    setRemoved(true);
+    startTransition(async () => {
+      await removeQuizSession(session.id);
+    });
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirm(false);
+  };
+
+  // If deleted, don't render anything
+  if (removed) return null;
 
   const isCompleted = session.status === "completed";
   const answeredCount = Object.keys(session.answers ?? {}).length;
@@ -64,7 +78,7 @@ export default function SessionCard({ session }: SessionCardProps) {
 
   return (
     <div
-      className="card rounded-xl p-4 transition-all duration-200 hover:translate-y-[-2px] group"
+      className="card rounded-xl p-4 transition-all duration-200 hover:translate-y-[-2px] group relative"
       style={{
         borderColor:
           session.mode === "exam"
@@ -72,6 +86,49 @@ export default function SessionCard({ session }: SessionCardProps) {
             : "var(--card-border)",
       }}
     >
+      {/* ── Custom Confirmation Modal ── */}
+      {showConfirm && (
+        <div
+          className="absolute inset-0 z-20 rounded-xl flex flex-col items-center justify-center gap-4 px-6 animate-fade-in"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <p className="text-sm font-semibold text-center" style={{ color: "var(--text-primary)" }}>
+            Delete this quiz?
+          </p>
+          <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-3 w-full max-w-[240px]">
+            <button
+              type="button"
+              onClick={handleCancelDelete}
+              className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              className="flex-1 py-2 rounded-lg text-sm font-bold text-white transition-all duration-150 hover:opacity-90"
+              style={{
+                background: "var(--incorrect)",
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3 mb-3">
         {/* Left: mode badge + chapter */}
         <div className="flex flex-col gap-1 min-w-0">
@@ -110,7 +167,7 @@ export default function SessionCard({ session }: SessionCardProps) {
         {/* Right: score or progress count */}
         <div className="text-right flex-shrink-0 flex items-start gap-4">
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             disabled={isPending}
             className="mt-1 text-[var(--text-muted)] hover:text-[var(--incorrect)] transition-colors disabled:opacity-50"
             title="Delete Quiz"
