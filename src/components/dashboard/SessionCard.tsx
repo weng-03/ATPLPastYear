@@ -106,10 +106,9 @@ export default function SessionCard({ session }: SessionCardProps) {
             <button
               type="button"
               onClick={handleCancelDelete}
-              className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150"
+              className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border border-[var(--border)] hover:border-sky-400 hover:text-sky-500 hover:shadow-[0_0_12px_rgba(56,189,248,0.4)]"
               style={{
                 background: "var(--bg-elevated)",
-                border: "1px solid var(--border)",
                 color: "var(--text-secondary)",
               }}
             >
@@ -118,7 +117,7 @@ export default function SessionCard({ session }: SessionCardProps) {
             <button
               type="button"
               onClick={handleConfirmDelete}
-              className="flex-1 py-2 rounded-lg text-sm font-bold text-white transition-all duration-150 hover:opacity-90"
+              className="flex-1 py-2 rounded-lg text-sm font-bold text-white transition-all duration-200 border border-transparent hover:border-red-300 hover:shadow-[0_0_14px_rgba(239,68,68,0.6)] hover:brightness-110"
               style={{
                 background: "var(--incorrect)",
               }}
